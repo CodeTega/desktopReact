@@ -11,11 +11,11 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  getSenders: () => ipcRenderer.invoke("get-senders"),
-  getRecipients: () => ipcRenderer.invoke("get-recipients"),
-  getTemplates: () => ipcRenderer.invoke("get-templates"),
+  fetchTemplates: () => ipcRenderer.invoke("fetch-templates"),
   sendEmail: (data) => ipcRenderer.invoke("send-email", data),
   fetchLogs: () => ipcRenderer.invoke("fetch-logs"),
+  uploadCsv: (filePath) => ipcRenderer.invoke("upload-csv", data),
+  getRecipientsFromDB: () => ipcRenderer.invoke("get-recipients-from-db"),
 });
 
 console.log("successfullly locaed");
