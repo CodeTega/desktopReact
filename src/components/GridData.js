@@ -15,14 +15,9 @@ const GridData = () => {
     { make: "Fiat", model: "500", price: 15774, electric: false },
     { make: "Nissan", model: "Juke", price: 20675, electric: false },
   ]);
-  const CustomButtonComponent = (props) => {
+  const CustomButtonComponent = (name, color) => {
     return (
-      <button
-        style={{ color: "blue", background: "red" }}
-        onClick={() => window.alert("clicked")}
-      >
-        {props}
-      </button>
+      <Button sx={{ backgroundColor: color, color: "black" }}>{name}</Button>
     );
   };
   const [columnDefs, setColumnDefs] = useState([
@@ -39,13 +34,13 @@ const GridData = () => {
     { headerName: "Template", field: "model", flex: 1 },
     {
       field: "Receivers",
-      cellRenderer: () => CustomButtonComponent("RUN"),
+      cellRenderer: () => CustomButtonComponent("View", "#008CBA"),
       flex: 1,
     },
     {
       headerName: "Action",
-      field: "button",
-      cellRenderer: () => CustomButtonComponent("View"),
+      // field: "button",
+      cellRenderer: () => CustomButtonComponent("Run", "#04AA6D"),
       flex: 1,
     },
   ]);

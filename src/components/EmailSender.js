@@ -11,6 +11,10 @@ import {
   OutlinedInput,
   Grid2,
   TextField,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  FormLabel,
 } from "@mui/material";
 
 import GridData from "./GridData.js";
@@ -28,10 +32,10 @@ const recipientst = [
   { id: 4, email: "recipient4@example.com" },
 ];
 
-const templatest = [
-  { id: 1, name: "Template 1", body: "This is the content of Template 1." },
-  { id: 2, name: "Template 2", body: "Content of Template 2." },
-];
+// const templatest = [
+//   { id: 1, name: "Template 1", body: "This is the content of Template 1." },
+//   { id: 2, name: "Template 2", body: "Content of Template 2." },
+// ];
 
 const EmailSender = () => {
   const [formData, setFormData] = useState({
@@ -43,21 +47,15 @@ const EmailSender = () => {
   const [senders, setSenders] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [value, setValue] = useState("");
+
+  const handleRadioChange = (event) => {
+    console.log("handleRadioChange", event.target);
+    setValue(event.target.value);
+  };
 
   useEffect(() => {
-    let template;
     async function fetchData() {
-      // const fetchRecipients = async () => {
-      //   try {
-      //     const recipientList = await window.electronAPI.getRecipientsFromDB();
-      //     console.log(recipientList, "here is the recipient list");
-      //     // setRecipients(recipientList);
-      //   } catch (error) {
-      //     console.error("Failed to fetch recipients:", error);
-      //   }
-      // };
-
-      // fetchRecipients();
       const template = await window.electronAPI
         .fetchTemplates()
         .then((data) => data);
@@ -65,7 +63,7 @@ const EmailSender = () => {
       console.log("fetchTemplates returned:", template.recordsets[0][0]);
       setSenders(senderst);
       setRecipients(recipientst);
-      setTemplates(templatest);
+      setTemplates(template.recordsets[0]);
     }
 
     fetchData();
@@ -129,12 +127,7 @@ const EmailSender = () => {
         </Typography>
         <form>
           <FormControl fullWidth margin="normal">
-            <TextField
-              id="outlined-password-input"
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-            />
+            <TextField id="Name" label="Name" type="text" />
           </FormControl>
           <FormControl fullWidth margin="normal">
             <InputLabel id="sender-label">Sender</InputLabel>
@@ -151,6 +144,51 @@ const EmailSender = () => {
                 </MenuItem>
               ))}
             </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="compaign-label">Compaign</InputLabel>
+            <Select
+              labelId="compaign-label"
+              name="compaign"
+              value={formData.sender}
+              onChange={handleChange}
+              label="Compaign"
+            >
+              {senders.map((sender) => (
+                <MenuItem key={sender.id} value={sender.id}>
+                  {sender.email}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl>
+            <Grid2 display="flex" justifyContent="center" alignItems="center">
+              <FormLabel id="demo-row-radio-buttons-group-label">
+                Type
+              </FormLabel>
+              <RadioGroup
+                sx={{ marginLeft: 10 }}
+                row
+                aria-labelledby="demo-row-radio-buttons-group-label"
+                name="row-radio-buttons-group"
+                value={value}
+                onChange={handleRadioChange}
+              >
+                <FormControlLabel
+                  sx={{ marginRight: 5 }}
+                  value="official"
+                  control={<Radio />}
+                  label="Official"
+                />
+                <FormControlLabel
+                  value="other"
+                  control={<Radio />}
+                  label="Other"
+                />
+              </RadioGroup>
+            </Grid2>
           </FormControl>
 
           <FormControl fullWidth margin="normal">
@@ -191,7 +229,7 @@ const EmailSender = () => {
             >
               {templates.map((template) => (
                 <MenuItem key={template.id} value={template.id}>
-                  {template.name}
+                  {template.Template_Name}
                 </MenuItem>
               ))}
             </Select>
