@@ -75,6 +75,44 @@ ipcMain.handle("fetch-recipients", async () => {
   }
 });
 
+//fetch senders
+ipcMain.handle("fetch-senders", async () => {
+  try {
+    const pool = await sql.connect(databaseConfig);
+    const result = await pool.request().query(`SELECT * FROM email_senders`);
+    console.log(result, "email_senders");
+    return result;
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return error;
+  }
+});
+
+// Add Jobs
+ipcMain.handle("add-job", async (event, jobData) => {
+  const { jobName, emailSenderId, emailTemplateId } = jobData;
+
+  try {
+    const pool = await sql.connect(databaseConfig);
+    const result = await pool
+      .request()
+      .input("Job_Name", sql.VarChar(100), jobName)
+      .input("Email_Sender_Id", sql.Int, emailSenderId)
+      .input("Email_Template_Id", sql.Int, emailTemplateId).query(`
+        INSERT INTO email_jobs (Job_Name, Email_Sender_Id, Email_Template_Id)
+        VALUES (@Job_Name, @Email_Sender_Id, @Email_Template_Id);
+        
+        SELECT SCOPE_IDENTITY() AS JobId;
+      `);
+
+    console.log("Job added successfully:", result);
+    return { jobId: result.recordset[0].JobId, success: true };
+  } catch (error) {
+    console.error("Error adding job:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Function to send email
 ipcMain.handle(
   "send-email",
