@@ -61,8 +61,14 @@ const EmailSender = () => {
         .then((data) => data);
 
       console.log("fetchTemplates returned:", template.recordsets[0][0]);
+
+      const recipient = await window.electronAPI
+        .fetchRecipients()
+        .then((data) => data);
+
+      console.log("fetchRecipients returned:", recipient.recordsets[0][0]);
       setSenders(senderst);
-      setRecipients(recipientst);
+      setRecipients(recipient.recordsets[0]);
       setTemplates(template.recordsets[0]);
     }
 
@@ -211,8 +217,8 @@ const EmailSender = () => {
               )}
             >
               {recipients.map((recipient) => (
-                <MenuItem key={recipient.id} value={recipient.email}>
-                  {recipient.email}
+                <MenuItem key={recipient.id} value={recipient.Email}>
+                  {recipient.Email}
                 </MenuItem>
               ))}
             </Select>

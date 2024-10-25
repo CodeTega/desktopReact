@@ -49,11 +49,25 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+//Fetch Templates
 ipcMain.handle("fetch-templates", async () => {
   try {
     const pool = await sql.connect(databaseConfig);
     const result = await pool.request().query(`SELECT * FROM email_templates`);
     console.log(result, "email_templates");
+    return result;
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return error;
+  }
+});
+
+//Fetch Recipients
+ipcMain.handle("fetch-recipients", async () => {
+  try {
+    const pool = await sql.connect(databaseConfig);
+    const result = await pool.request().query(`SELECT * FROM email_recipients`);
+    console.log(result, "email_recipients");
     return result;
   } catch (error) {
     console.error("Error fetching data:", error);

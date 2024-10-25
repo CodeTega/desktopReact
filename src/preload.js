@@ -12,6 +12,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   fetchTemplates: () => ipcRenderer.invoke("fetch-templates"),
+  fetchRecipients: () => ipcRenderer.invoke("fetch-recipients"),
   sendEmail: (data) => ipcRenderer.invoke("send-email", data),
   fetchLogs: () => ipcRenderer.invoke("fetch-logs"),
   uploadCsv: (filePath) => ipcRenderer.invoke("upload-csv", data),
