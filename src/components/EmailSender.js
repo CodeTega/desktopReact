@@ -18,7 +18,6 @@ import {
 } from "@mui/material";
 
 import GridData from "./GridData.js";
-import EmailLogs from "./EmailLogs.js";
 
 const senderst = [
   { id: 1, email: "r.awais@pionlog.com", password: "xlxn nbnc esbc aefn" },
@@ -40,12 +39,16 @@ const recipientst = [
 const EmailSender = () => {
   const [formData, setFormData] = useState({
     sender: "",
+    campaign: "",
     recipients: [],
+
     template: "",
     body: "",
   });
   const [senders, setSenders] = useState([]);
   const [recipients, setRecipients] = useState([]);
+  const [filteredRecipients, setFilteredRecipients] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [value, setValue] = useState("");
 
@@ -71,7 +74,12 @@ const EmailSender = () => {
         .fetchSenders()
         .then((data) => data);
 
-      console.log("fetchRecipients returned:", recipient.recordsets[0][0]);
+      const campaignTypes = Array.from(
+        new Set(recipient.recordsets[0].map((item) => item.Campaign))
+      );
+      console.log(campaignTypes, "campaign");
+      setCampaigns(campaignTypes);
+
       setSenders(sender.recordsets[0]);
       setRecipients(recipient.recordsets[0]);
       setTemplates(template.recordsets[0]);
@@ -80,12 +88,37 @@ const EmailSender = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const groupedByCampaign = recipients.reduce((acc, item) => {
+      const campaign = item.Campaign;
+      if (!acc[campaign]) {
+        acc[campaign] = [];
+      }
+      acc[campaign].push(item);
+      return acc;
+    }, {});
+    const rec = groupedByCampaign[formData.campaign];
+    if (value === "official") {
+      const officialCampaigns = rec?.filter((campaign) => campaign.IsOfficial);
+      setFilteredRecipients(officialCampaigns);
+    } else if (value === "other") {
+      const nonOfficialCampaigns = rec?.filter(
+        (campaign) => !campaign.IsOfficial
+      );
+
+      setFilteredRecipients(nonOfficialCampaigns);
+    } else {
+      setFilteredRecipients([]);
+    }
+  }, [formData.campaign, value]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value, // Updates formData.campaign when a campaign is selected
+    }));
+    console.log(name, value, "name, value");
 
     if (name === "template") {
       const selectedTemplate = templates.find((t) => t.id === value);
@@ -150,7 +183,7 @@ const EmailSender = () => {
               label="Sender"
             >
               {senders.map((sender) => (
-                <MenuItem key={sender.id} value={sender.id}>
+                <MenuItem key={sender.id} value={sender.Email}>
                   {sender.Email}
                 </MenuItem>
               ))}
@@ -160,15 +193,15 @@ const EmailSender = () => {
           <FormControl fullWidth margin="normal">
             <InputLabel id="compaign-label">Compaign</InputLabel>
             <Select
-              labelId="compaign-label"
-              name="compaign"
-              value={formData.sender}
+              labelId="campaign-label"
+              name="campaign" // Change "compaign" to "campaign"
+              value={formData.campaign} // Ensure this points to the correct state
               onChange={handleChange}
-              label="Compaign"
+              label="Campaign"
             >
-              {senders.map((sender) => (
-                <MenuItem key={sender.id} value={sender.id}>
-                  {sender.email}
+              {campaigns.map((campaign, index) => (
+                <MenuItem key={index} value={campaign}>
+                  {campaign}
                 </MenuItem>
               ))}
             </Select>
@@ -221,7 +254,7 @@ const EmailSender = () => {
                 </Box>
               )}
             >
-              {recipients.map((recipient) => (
+              {filteredRecipients.map((recipient) => (
                 <MenuItem key={recipient.id} value={recipient.Email}>
                   {recipient.Email}
                 </MenuItem>
@@ -239,7 +272,7 @@ const EmailSender = () => {
               label="Template"
             >
               {templates.map((template) => (
-                <MenuItem key={template.id} value={template.id}>
+                <MenuItem key={template.id} value={template.Template_Name}>
                   {template.Template_Name}
                 </MenuItem>
               ))}
@@ -257,7 +290,7 @@ const EmailSender = () => {
         </form>
       </Box>
       <GridData />
-      <EmailLogs />
+      {/* <EmailLogs /> */}
     </Grid2>
   );
 };
