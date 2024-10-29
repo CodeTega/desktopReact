@@ -212,126 +212,92 @@ ipcMain.handle("fetch-job-recipients", async (event, jobId) => {
 });
 
 //ADD Job Logs in to history table
+
 ipcMain.handle("log-job-run", async (event, jobId) => {
   try {
     const pool = await sql.connect(databaseConfig);
 
-    // Fetch job data to log
-    const jobData = await pool.request().input("Email_Job_Id", sql.Int, jobId)
+    // Fetch job details
+    const jobResult = await pool.request().input("Job_Id", sql.Int, jobId)
       .query(`
         SELECT 
+          jobs.ID AS JobID,
           jobs.Job_Name,
           senders.Email AS SenderEmail,
-          templates.Template_Name,
           templates.Template_Body,
+          recipients.First_Name,
+          recipients.Last_Name,
           recipients.Email AS RecipientEmail
-        FROM email_jobs AS jobs
-        LEFT JOIN email_senders AS senders ON jobs.Email_Sender_Id = senders.Email_Sender_Id
-        LEFT JOIN email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id
-        LEFT JOIN job_recipients AS job_rec ON jobs.ID = job_rec.Email_Job_Id
-        LEFT JOIN email_recipients AS recipients ON job_rec.Recipient_Id = recipients.Email_Recipient_ID
-        WHERE jobs.ID = @Email_Job_Id
+        FROM 
+          email_jobs AS jobs
+        JOIN 
+          email_senders AS senders ON jobs.Email_Sender_Id = senders.Email_Sender_Id
+        JOIN 
+          email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id
+        JOIN 
+          job_recipients AS job_rec ON jobs.ID = job_rec.Email_Job_Id
+        JOIN 
+          email_recipients AS recipients ON job_rec.Recipient_Id = recipients.Email_Recipient_ID
+        WHERE 
+          jobs.ID = @Job_Id
       `);
 
-    // Format log data as JSON or as a string
-    const logDetails = JSON.stringify(jobData.recordset);
+    if (jobResult.recordset.length === 0) {
+      throw new Error("Job not found");
+    }
 
-    // Insert log entry
-    await pool
-      .request()
-      .input("Email_Job_Id", sql.Int, jobId)
-      .input("Executed_Date", sql.DateTime, new Date())
-      .input("Email_Job_Logs", sql.NVarChar(sql.MAX), logDetails).query(`
-        INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
-        VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs);
-      `);
+    const jobDetails = jobResult.recordset;
+    const templateBody = jobDetails[0].Template_Body;
 
-    return { success: true, message: "Job logged successfully." };
+    // Loop through each recipient and send an email
+    for (const recipient of jobDetails) {
+      const personalizedBody = templateBody.replace(
+        /{recipient_name}|{lead.company}/g,
+        (matched) => {
+          // console.log.apply(recipient, "company is here");
+          if (matched === "{recipient_name}")
+            return `${recipient.First_Name} ${recipient.Last_Name}`;
+          if (matched === "{lead.company}") return `${recipient.Company}`;
+          return matched; // In case there are other unmatched placeholders
+        }
+      ); // Replace with actual recipient name
+      const mailOptions = {
+        from: jobDetails[0].SenderEmail,
+        to: recipient.RecipientEmail,
+        subject: jobDetails[0].Job_Name,
+        text: personalizedBody,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      // Insert log entry for each recipient
+      await pool
+        .request()
+        .input("Email_Job_Id", sql.Int, jobDetails[0].JobID)
+        .input("Executed_Date", sql.DateTime, new Date())
+        .input(
+          "Email_Job_Logs",
+          sql.VarChar(sql.MAX),
+          JSON.stringify({
+            Job_Name: jobDetails[0].Job_Name,
+            Recipient: recipient.Email,
+            Status: "Email Sent",
+          })
+        ).query(`
+          INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
+          VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
+        `);
+    }
+
+    console.log("Emails sent and logs added successfully");
+    return { success: true };
   } catch (error) {
-    console.error("Error logging job run:", error);
+    console.error("Error running job:", error);
     return { success: false, error: error.message };
   }
 });
 
-// Function to send email
-ipcMain.handle(
-  "send-email",
-  async (event, { senders, templates, recipients, senderId, templateId }) => {
-    const sender = senders.find((s) => s.id === senderId);
-    const template = templates.find((t) => t.id === templateId);
-    if (!sender || !template || recipients.length === 0) {
-      return {
-        success: false,
-        message: "Invalid sender, recipients, or template.",
-      };
-    }
-    return new Promise((resolve, reject) => {
-      // Insert the recipient into the database
-      db.run(
-        "INSERT INTO recipients (email) VALUES (?)",
-        recipients.join(", "),
-        function (err) {
-          if (err) {
-            return reject({ error: "Failed to save recipient" });
-          }
-
-          // Send the email
-          const mailOptions = {
-            from: sender.email,
-            to: recipients.join(", "),
-            subject: "Email from Template",
-            text: template.body,
-          };
-
-          transporter.sendMail(mailOptions, (error, info) => {
-            console.log("sender is running");
-            let status, logMessage;
-
-            if (error) {
-              console.log(error.message, "error", mailOptions, info);
-              status = "failed";
-              logMessage = error.message;
-            } else {
-              status = "success";
-              logMessage = `Email sent: ${info.response}`;
-            }
-
-            // Insert a log record for this email send attempt
-            db.run(
-              "INSERT INTO logs (recipient_id, status, message, timestamp) VALUES (?, ?, ?, ?)",
-              [
-                recipients.join(", "),
-                status,
-                logMessage,
-                new Date().toISOString(),
-              ],
-              (logErr) => {
-                if (logErr) {
-                  return reject({ error: "Failed to log email" });
-                }
-
-                resolve({ success: true, status, logMessage });
-              }
-            );
-          });
-        }
-      );
-    });
-  }
-);
-
 // Fetch logs from the database
-ipcMain.handle("fetch-logs", async () => {
-  return new Promise((resolve, reject) => {
-    db.all("SELECT * FROM logs", [], (err, rows) => {
-      if (err) {
-        reject({ error: "Failed to fetch logs" });
-      } else {
-        resolve(rows);
-      }
-    });
-  });
-});
 
 const createWindow = () => {
   // Create the browser window.
