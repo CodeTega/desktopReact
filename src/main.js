@@ -174,6 +174,43 @@ ipcMain.handle("add-job", async (event, jobData) => {
   }
 });
 
+//View job recipients
+ipcMain.handle("fetch-job-recipients", async (event, jobId) => {
+  try {
+    console.log("Received jobId:", jobId); // Log jobId to check what is being passed
+
+    // Validate and parse jobId
+    if (!jobId || isNaN(jobId)) {
+      throw new Error(`Invalid jobId: not a number. Received: ${jobId}`);
+    }
+
+    const parsedJobId = parseInt(jobId, 10);
+    const pool = await sql.connect(databaseConfig);
+
+    const result = await pool
+      .request()
+      .input("Email_Job_Id", sql.Int, parsedJobId).query(`
+        SELECT 
+          recipients.Email_Recipient_ID,
+          recipients.Email,
+          recipients.First_Name,
+          recipients.Last_Name
+        FROM 
+          job_recipients AS job_rec
+        JOIN 
+          email_recipients AS recipients 
+          ON job_rec.Recipient_Id = recipients.Email_Recipient_ID
+        WHERE 
+          job_rec.Email_Job_Id = @Email_Job_Id;
+      `);
+
+    return result.recordset; // Returns an array of recipients
+  } catch (error) {
+    console.error("Error fetching job recipients:", error);
+    return { success: false, message: error.message }; // Improved error handling
+  }
+});
+
 // Function to send email
 ipcMain.handle(
   "send-email",

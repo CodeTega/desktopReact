@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   fetchSenders: () => ipcRenderer.invoke("fetch-senders"),
   fetchEmailJobs: () => ipcRenderer.invoke("fetch-email-jobs"),
   addJob: (jobData) => ipcRenderer.invoke("add-job", jobData),
+  fetchJobRecipients: (jobData) =>
+    ipcRenderer.invoke("fetch-job-recipients", jobData),
   sendEmail: (data) => ipcRenderer.invoke("send-email", data),
   fetchLogs: () => ipcRenderer.invoke("fetch-logs"),
   uploadCsv: (filePath) => ipcRenderer.invoke("upload-csv", data),
