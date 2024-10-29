@@ -120,20 +120,22 @@ const EmailSender = () => {
     }));
     console.log(name, value, "name, value");
 
-    if (name === "template") {
-      const selectedTemplate = templates.find((t) => t.id === value);
-      setFormData((prev) => ({ ...prev, body: selectedTemplate?.body || "" }));
-    }
+    // if (name === "template") {
+    //   const selectedTemplate = templates.find((t) => t.id === value);
+    //   setFormData((prev) => ({ ...prev, body: selectedTemplate?.body || "" }));
+    // }
   };
 
   const handleRecipientChange = (event) => {
+    console.log(event, "event");
+
     const {
       target: { value },
     } = event;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       recipients: typeof value === "string" ? value.split(",") : value,
-    });
+    }));
   };
 
   const handleSend = async () => {
@@ -183,7 +185,7 @@ const EmailSender = () => {
               label="Sender"
             >
               {senders.map((sender) => (
-                <MenuItem key={sender.id} value={sender.Email}>
+                <MenuItem key={sender.id} value={sender.Email_Sender_Id}>
                   {sender.Email}
                 </MenuItem>
               ))}
@@ -248,14 +250,20 @@ const EmailSender = () => {
               }
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} />
-                  ))}
+                  {selected.map((id) => {
+                    const recipient = filteredRecipients.find(
+                      (rec) => rec.Email_Recipient_ID === id
+                    );
+                    return <Chip key={id} label={recipient?.Email || id} />;
+                  })}
                 </Box>
               )}
             >
               {filteredRecipients.map((recipient) => (
-                <MenuItem key={recipient.id} value={recipient.Email}>
+                <MenuItem
+                  key={recipient.Email_Recipient_ID}
+                  value={recipient.Email_Recipient_ID}
+                >
                   {recipient.Email}
                 </MenuItem>
               ))}
@@ -272,7 +280,10 @@ const EmailSender = () => {
               label="Template"
             >
               {templates.map((template) => (
-                <MenuItem key={template.id} value={template.Template_Name}>
+                <MenuItem
+                  key={template.Email_Template_Id}
+                  value={template.Email_Template_Id}
+                >
                   {template.Template_Name}
                 </MenuItem>
               ))}
