@@ -41,7 +41,7 @@ const EmailSender = () => {
     sender: "",
     campaign: "",
     recipients: [],
-
+    jobName: "",
     template: "",
     body: "",
   });
@@ -138,6 +138,20 @@ const EmailSender = () => {
     }));
   };
 
+  const handleAdd = async () => {
+    const response = await window.electronAPI.addJob({
+      jobName: formData.jobName,
+      emailSenderId: formData.sender,
+      emailTemplateId: formData.template,
+      recipients: formData.recipients,
+    });
+    if (response.success) {
+      alert("Job added successfully!");
+    } else {
+      alert(`Error: ${response.message}`);
+    }
+  };
+
   const handleSend = async () => {
     console.log("Send", formData.recipients);
     // senders, templates, senderId, recipients, templateId;
@@ -173,7 +187,14 @@ const EmailSender = () => {
         </Typography>
         <form>
           <FormControl fullWidth margin="normal">
-            <TextField id="Name" label="Name" type="text" />
+            <TextField
+              id="Name"
+              label="Name"
+              name="jobName"
+              type="text"
+              value={formData.jobName}
+              onChange={handleChange}
+            />
           </FormControl>
           <FormControl fullWidth margin="normal">
             <InputLabel id="sender-label">Sender</InputLabel>
@@ -294,7 +315,7 @@ const EmailSender = () => {
             <Button variant="contained" color="primary" onClick={handleSend}>
               save
             </Button>
-            <Button variant="contained" color="primary" onClick={handleSend}>
+            <Button variant="contained" color="primary" onClick={handleAdd}>
               save & send
             </Button>
           </Box>

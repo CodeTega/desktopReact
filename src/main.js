@@ -54,7 +54,6 @@ ipcMain.handle("fetch-templates", async () => {
   try {
     const pool = await sql.connect(databaseConfig);
     const result = await pool.request().query(`SELECT * FROM email_templates`);
-    console.log(result, "email_templates");
     return result;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -67,7 +66,6 @@ ipcMain.handle("fetch-recipients", async () => {
   try {
     const pool = await sql.connect(databaseConfig);
     const result = await pool.request().query(`SELECT * FROM email_recipients`);
-    console.log(result, "email_recipients");
     return result;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -80,7 +78,6 @@ ipcMain.handle("fetch-senders", async () => {
   try {
     const pool = await sql.connect(databaseConfig);
     const result = await pool.request().query(`SELECT * FROM email_senders`);
-    console.log(result, "email_senders");
     return result;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -90,25 +87,47 @@ ipcMain.handle("fetch-senders", async () => {
 
 // Add Jobs
 ipcMain.handle("add-job", async (event, jobData) => {
-  const { jobName, emailSenderId, emailTemplateId } = jobData;
+  const { jobName, emailSenderId, emailTemplateId, recipients } = jobData;
+  console.log(jobData, "job Data ");
 
   try {
     const pool = await sql.connect(databaseConfig);
-    const result = await pool
+    // Start a transaction for consistency
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    // Step 1: Insert job and retrieve job ID
+    const jobResult = await transaction
       .request()
       .input("Job_Name", sql.VarChar(100), jobName)
       .input("Email_Sender_Id", sql.Int, emailSenderId)
       .input("Email_Template_Id", sql.Int, emailTemplateId).query(`
         INSERT INTO email_jobs (Job_Name, Email_Sender_Id, Email_Template_Id)
         VALUES (@Job_Name, @Email_Sender_Id, @Email_Template_Id);
-        
-        SELECT SCOPE_IDENTITY() AS JobId;
+
+        SELECT SCOPE_IDENTITY() AS ID;
       `);
 
-    console.log("Job added successfully:", result);
-    return { jobId: result.recordset[0].JobId, success: true };
+    const jobId = jobResult.recordset[0].ID; // Job ID from the insertion
+
+    // Step 2: Insert recipients into job_recipients table using the job ID
+    for (const recipientId of recipients) {
+      await transaction
+        .request()
+        .input("Email_Job_ID", sql.Int, jobId)
+        .input("Recipient_ID", sql.Int, recipientId).query(`
+          INSERT INTO job_recipients (Email_Job_ID, Recipient_ID)
+          VALUES (@Email_Job_ID, @Recipient_ID);
+        `);
+    }
+
+    // Commit the transaction after successful inserts
+    await transaction.commit();
+
+    console.log("Job and recipients added successfully.");
+    return { jobId, success: true };
   } catch (error) {
-    console.error("Error adding job:", error);
+    console.error("Error adding job and recipients:", error);
     return { success: false, error: error.message };
   }
 });
