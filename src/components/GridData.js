@@ -23,6 +23,15 @@ const GridData = ({ emailJobs }) => {
     }
   };
 
+  const runJob = async (jobId) => {
+    const response = await window.electronAPI.addJobLogs(jobId);
+    if (response.success) {
+      console.log("Job run logged:", response.message);
+    } else {
+      console.error("Failed to log job run:", response.error);
+    }
+  };
+
   // Custom button component to trigger recipient fetching
   const CustomButtonComponent = (name, color, params, onClick) => (
     <Button
@@ -53,7 +62,9 @@ const GridData = ({ emailJobs }) => {
     {
       headerName: "Action",
       cellRenderer: (params) =>
-        CustomButtonComponent("Run", "#04AA6D", params, () => {}),
+        CustomButtonComponent("Run", "#04AA6D", params, () =>
+          runJob(params.data.ID)
+        ),
       flex: 1,
     },
   ]);

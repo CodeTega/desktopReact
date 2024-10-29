@@ -211,6 +211,48 @@ ipcMain.handle("fetch-job-recipients", async (event, jobId) => {
   }
 });
 
+//ADD Job Logs in to history table
+ipcMain.handle("log-job-run", async (event, jobId) => {
+  try {
+    const pool = await sql.connect(databaseConfig);
+
+    // Fetch job data to log
+    const jobData = await pool.request().input("Email_Job_Id", sql.Int, jobId)
+      .query(`
+        SELECT 
+          jobs.Job_Name,
+          senders.Email AS SenderEmail,
+          templates.Template_Name,
+          templates.Template_Body,
+          recipients.Email AS RecipientEmail
+        FROM email_jobs AS jobs
+        LEFT JOIN email_senders AS senders ON jobs.Email_Sender_Id = senders.Email_Sender_Id
+        LEFT JOIN email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id
+        LEFT JOIN job_recipients AS job_rec ON jobs.ID = job_rec.Email_Job_Id
+        LEFT JOIN email_recipients AS recipients ON job_rec.Recipient_Id = recipients.Email_Recipient_ID
+        WHERE jobs.ID = @Email_Job_Id
+      `);
+
+    // Format log data as JSON or as a string
+    const logDetails = JSON.stringify(jobData.recordset);
+
+    // Insert log entry
+    await pool
+      .request()
+      .input("Email_Job_Id", sql.Int, jobId)
+      .input("Executed_Date", sql.DateTime, new Date())
+      .input("Email_Job_Logs", sql.NVarChar(sql.MAX), logDetails).query(`
+        INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
+        VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs);
+      `);
+
+    return { success: true, message: "Job logged successfully." };
+  } catch (error) {
+    console.error("Error logging job run:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Function to send email
 ipcMain.handle(
   "send-email",
