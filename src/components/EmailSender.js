@@ -48,6 +48,7 @@ const EmailSender = () => {
   const [senders, setSenders] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [filteredRecipients, setFilteredRecipients] = useState([]);
+  const [emailJobs, setEmailJobs] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [value, setValue] = useState("");
@@ -83,6 +84,11 @@ const EmailSender = () => {
       setSenders(sender.recordsets[0]);
       setRecipients(recipient.recordsets[0]);
       setTemplates(template.recordsets[0]);
+      const jobs = await window.electronAPI
+        .fetchEmailJobs()
+        .then((data) => data);
+      console.log(jobs.recordsets[0], "email jobs");
+      setEmailJobs(jobs.recordsets[0]);
     }
 
     fetchData();
@@ -321,7 +327,7 @@ const EmailSender = () => {
           </Box>
         </form>
       </Box>
-      <GridData />
+      {emailJobs.length > 0 && <GridData emailJobs={emailJobs} />}
       {/* <EmailLogs /> */}
     </Grid2>
   );

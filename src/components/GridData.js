@@ -5,17 +5,12 @@ import "ag-grid-community/styles/ag-theme-alpine.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { Box, Button, Typography } from "@mui/material";
 
-const GridData = () => {
+const GridData = ({ emailJobs }) => {
   console.log("GridData");
-  const [rowData, setRowData] = useState([
-    { make: "Tesla", model: "Model Y", price: 64950, electric: true },
-    { make: "Ford", model: "F-Series", price: 33850, electric: false },
-    { make: "Toyota", model: "Corolla", price: 29600, electric: false },
-    { make: "Mercedes", model: "EQA", price: 48890, electric: true },
-    { make: "Fiat", model: "500", price: 15774, electric: false },
-    { make: "Nissan", model: "Juke", price: 20675, electric: false },
-  ]);
-  const CustomButtonComponent = (name, color) => {
+  const [rowData, setRowData] = useState(emailJobs);
+  console.log(rowData, "rowData");
+  const CustomButtonComponent = (name, color, params) => {
+    console.log(params.data, "here is the params");
     return (
       <Button sx={{ backgroundColor: color, color: "black" }}>{name}</Button>
     );
@@ -23,24 +18,29 @@ const GridData = () => {
   const [columnDefs, setColumnDefs] = useState([
     {
       headerName: "Name",
-      field: "make",
+      valueFormatter: (p) => p.data.Job_Name,
       flex: 2,
     },
     {
       field: "Sender",
-      valueFormatter: (p) => p.data.price,
+      valueFormatter: (p) => p.data.SenderEmail,
       flex: 1,
     },
-    { headerName: "Template", field: "model", flex: 1 },
+    {
+      headerName: "Template",
+      valueFormatter: (p) => p.data.Template_Name,
+      flex: 1,
+    },
     {
       field: "Receivers",
-      cellRenderer: () => CustomButtonComponent("View", "#008CBA"),
+      cellRenderer: (params) =>
+        CustomButtonComponent("View", "#008CBA", params),
       flex: 1,
     },
     {
       headerName: "Action",
       // field: "button",
-      cellRenderer: () => CustomButtonComponent("Run", "#04AA6D"),
+      cellRenderer: (params) => CustomButtonComponent("Run", "#04AA6D", params),
       flex: 1,
     },
   ]);

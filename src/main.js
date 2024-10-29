@@ -85,6 +85,48 @@ ipcMain.handle("fetch-senders", async () => {
   }
 });
 
+//Fetch email jobs
+//fetch senders
+ipcMain.handle("fetch-email-jobs", async () => {
+  try {
+    const pool = await sql.connect(databaseConfig);
+    const result = await pool.request().query(`  
+SELECT 
+    jobs.ID,  
+    jobs.Job_Name,
+    
+    -- Sender details
+    senders.Email_Sender_Id AS SenderID,
+    senders.Email AS SenderEmail,
+    senders.FirstName AS SenderName,
+    
+    -- Template details
+    templates.Email_Template_Id AS TemplateID,
+    templates.Template_Name,
+    templates.Template_Body,
+    
+    -- Job additional columns
+    jobs.Add_Who,
+    jobs.Add_Date,
+    jobs.Edit_Who,
+    jobs.Edit_Date,
+    jobs.active
+FROM 
+    email_jobs AS jobs
+LEFT JOIN 
+    email_senders AS senders ON jobs.Email_Sender_Id = senders.Email_Sender_Id
+LEFT JOIN 
+    email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id;
+`);
+
+    console.log("Fetched jobs with details:", result.recordset);
+    return result;
+  } catch (error) {
+    console.error("Error fetching jobs with details:", error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Add Jobs
 ipcMain.handle("add-job", async (event, jobData) => {
   const { jobName, emailSenderId, emailTemplateId, recipients } = jobData;
