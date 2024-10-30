@@ -225,6 +225,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           jobs.Job_Name,
           senders.Email AS SenderEmail,
           templates.Template_Body,
+          templates.Template_Subject,
           recipients.First_Name,
           recipients.Last_Name,
           recipients.Company,
@@ -252,20 +253,16 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
 
     // Loop through each recipient and send an email
     for (const recipient of jobDetails) {
-      const personalizedBody = templateBody.replace(
-        /{recipient_name}|{lead.company}/g,
-        (matched) => {
-          // console.log.apply(recipient, "company is here");
-          if (matched === "{recipient_name}")
-            return `${recipient.First_Name} ${recipient.Last_Name}`;
-          if (matched === "{lead.company}") return `${recipient.Company}`;
-          return matched; // In case there are other unmatched placeholders
-        }
-      ); // Replace with actual recipient name
+      const personalizedBody = templateBody
+        .replace(
+          "{recipient_name}",
+          `${recipient.First_Name} ${recipient.Last_Name}`
+        )
+        .replace("{lead.company}", `${recipient.Company}`); // Replace with actual recipient name
       const mailOptions = {
         from: jobDetails[0].SenderEmail,
         to: recipient.RecipientEmail,
-        subject: jobDetails[0].Job_Name,
+        subject: jobDetails[0].Template_Subject,
         text: personalizedBody,
       };
 
