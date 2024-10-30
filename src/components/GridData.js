@@ -4,6 +4,7 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { Box, Button, Typography, Modal } from "@mui/material";
+import Loader from "./UI/Loader";
 
 const GridData = ({ emailJobs }) => {
   const [rowData, setRowData] = useState(emailJobs);
@@ -11,6 +12,7 @@ const GridData = ({ emailJobs }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [historyData, setHistoryData] = useState([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
 
   useEffect(() => {
     setRowData(emailJobs);
@@ -47,12 +49,14 @@ const GridData = ({ emailJobs }) => {
   };
 
   const runJob = async (jobId) => {
+    setShowLoader(true);
     const response = await window.electronAPI.addJobLogs(jobId);
     if (response.success) {
       alert("Email sent successfully!");
     } else {
       alert("Error:", response.error);
     }
+    setShowLoader(false);
   };
 
   // Custom button component to trigger recipient fetching
@@ -102,6 +106,7 @@ const GridData = ({ emailJobs }) => {
 
   return (
     <Box sx={{ padding: 3, maxWidth: 750, margin: "0 auto" }}>
+      {showLoader && <Loader open={showLoader} />}
       <div className="ag-theme-quartz" style={{ height: 300 }}>
         <AgGridReact
           rowData={rowData}

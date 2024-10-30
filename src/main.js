@@ -279,7 +279,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     for (const recipient of jobDetails) {
       const personalizedBody = templateBody
         .replace(
-          "{recipient_name}",
+          "{lead.firstname}",
           `${recipient.First_Name} ${recipient.Last_Name}`
         )
         .replace("{lead.company}", `${recipient.Company}`); // Replace with actual recipient name
@@ -287,7 +287,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
         from: jobDetails[0].SenderEmail,
         to: recipient.RecipientEmail,
         subject: jobDetails[0].Template_Subject,
-        text: personalizedBody,
+        html: personalizedBody,
       };
 
       await transporter.sendMail(mailOptions);

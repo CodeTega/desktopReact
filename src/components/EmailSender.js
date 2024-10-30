@@ -313,6 +313,13 @@ const EmailSender = () => {
               variant="contained"
               color="primary"
               onClick={() => handleAdd(false)}
+              disabled={
+                !formData.jobName ||
+                !formData.sender ||
+                !formData.campaign ||
+                !formData.template ||
+                !formData.recipients.length
+              }
               sx={{ mr: 1 }}
             >
               save
@@ -321,6 +328,13 @@ const EmailSender = () => {
               variant="contained"
               color="primary"
               onClick={handleAddAndSend}
+              disabled={
+                !formData.jobName ||
+                !formData.sender ||
+                !formData.campaign ||
+                !formData.template ||
+                !formData.recipients.length
+              }
             >
               save & send
             </Button>
