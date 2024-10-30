@@ -11,44 +11,6 @@ if (require("electron-squirrel-startup")) {
   app.quit();
 }
 
-// Set up the SQLite database
-// const dbPath = path.join(__dirname, "database.sqlite");
-// const db = new sqlite3.Database(dbPath, (err) => {
-//   if (err) {
-//     console.error("Error opening database:", err);
-//   } else {
-//     console.log("Database connected.");
-//     // Create tables for recipients and logs
-//     db.run(`
-//       CREATE TABLE IF NOT EXISTS recipients (
-//         id INTEGER PRIMARY KEY AUTOINCREMENT,
-//         email TEXT
-//       )
-//     `);
-
-//     db.run(`
-//       CREATE TABLE IF NOT EXISTS logs (
-//         id INTEGER PRIMARY KEY AUTOINCREMENT,
-//         recipient_id INTEGER,
-//         status TEXT,
-//         message TEXT,
-//         timestamp TEXT,
-//         FOREIGN KEY (recipient_id) REFERENCES recipients(id)
-//       )
-//     `);
-//   }
-// });
-
-// Create an email transporter (for example, using Gmail SMTP)
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "r.awais@pionlog.com",
-    pass: "xlxn nbnc esbc aefn",
-  },
-});
-
 //Fetch Templates
 ipcMain.handle("fetch-templates", async () => {
   try {
@@ -248,6 +210,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           jobs.ID AS JobID,
           jobs.Job_Name,
           senders.Email AS SenderEmail,
+          senders.Sender_Password AS SenderPassword,
           templates.Template_Body,
           templates.Template_Subject,
           recipients.First_Name,
@@ -275,6 +238,15 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     const jobDetails = jobResult.recordset;
     const templateBody = jobDetails[0].Template_Body;
 
+    //Transporter
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: jobDetails[0].SenderEmail,
+        pass: jobDetails[0].SenderPassword,
+      },
+    });
+
     // Loop through each recipient and send an email
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -282,10 +254,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     const sendEmailWithDelay = async (recipients) => {
       for (const recipient of recipients) {
         const personalizedBody = templateBody
-          .replace(
-            "{lead.firstname}",
-            `${recipient.First_Name} ${recipient.Last_Name}`
-          )
+          .replace("{lead.firstname}", `${recipient.First_Name}`)
           .replace("{lead.company}", `${recipient.Company}`);
 
         const mailOptions = {
@@ -318,8 +287,8 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           `);
 
         // Generate random delay time
-        const delayTime = 50000 + Math.floor(Math.random() * 10000);
-        // const delayTime = 50000 + (Math.floor(Math.random() * 50) + 1) * 1000;
+        // const delayTime = 50000 + Math.floor(Math.random() * 10000);
+        const delayTime = 50000 + (Math.floor(Math.random() * 50) + 1) * 1000;
         console.log(
           `Waiting for ${
             delayTime / 1000
