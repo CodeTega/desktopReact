@@ -26,9 +26,9 @@ const GridData = ({ emailJobs }) => {
   const runJob = async (jobId) => {
     const response = await window.electronAPI.addJobLogs(jobId);
     if (response.success) {
-      console.log("Job run logged:", response.message);
+      alert("Email sent successfully!");
     } else {
-      console.error("Failed to log job run:", response.error);
+      alert("Error:", response.error);
     }
   };
 

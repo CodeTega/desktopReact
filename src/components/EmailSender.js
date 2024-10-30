@@ -19,32 +19,17 @@ import {
 
 import GridData from "./GridData.js";
 
-const senderst = [
-  { id: 1, email: "r.awais@pionlog.com", password: "xlxn nbnc esbc aefn" },
-  { id: 2, email: "sender2@example.com", password: "app_password_2" },
-];
-
-const recipientst = [
-  { id: 1, email: "recipient1@example.com" },
-  { id: 2, email: "ranaawais0303gmail.com" },
-  { id: 3, email: "ahmadfareed.test@gmail.com" },
-  { id: 4, email: "recipient4@example.com" },
-];
-
-// const templatest = [
-//   { id: 1, name: "Template 1", body: "This is the content of Template 1." },
-//   { id: 2, name: "Template 2", body: "Content of Template 2." },
-// ];
+const initialState = {
+  sender: "",
+  campaign: "",
+  recipients: [],
+  jobName: "",
+  template: "",
+  body: "",
+};
 
 const EmailSender = () => {
-  const [formData, setFormData] = useState({
-    sender: "",
-    campaign: "",
-    recipients: [],
-    jobName: "",
-    template: "",
-    body: "",
-  });
+  const [formData, setFormData] = useState(initialState);
   const [senders, setSenders] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [filteredRecipients, setFilteredRecipients] = useState([]);
@@ -52,6 +37,7 @@ const EmailSender = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [value, setValue] = useState("");
+  const [jobId, setJobId] = useState();
 
   const handleRadioChange = (event) => {
     console.log("handleRadioChange", event.target);
@@ -118,23 +104,16 @@ const EmailSender = () => {
     }
   }, [formData.campaign, value]);
 
+  //handle change for single select and text fields
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value, // Updates formData.campaign when a campaign is selected
     }));
-    console.log(name, value, "name, value");
-
-    // if (name === "template") {
-    //   const selectedTemplate = templates.find((t) => t.id === value);
-    //   setFormData((prev) => ({ ...prev, body: selectedTemplate?.body || "" }));
-    // }
   };
 
   const handleRecipientChange = (event) => {
-    console.log(event, "event");
-
     const {
       target: { value },
     } = event;
@@ -144,37 +123,32 @@ const EmailSender = () => {
     }));
   };
 
-  const handleAdd = async () => {
+  const handleAdd = async (job) => {
     const response = await window.electronAPI.addJob({
       jobName: formData.jobName,
       emailSenderId: formData.sender,
       emailTemplateId: formData.template,
       recipients: formData.recipients,
     });
+    console.log(response, "response");
     if (response.success) {
+      setJobId(response.jobId);
       alert("Job added successfully!");
+      if (job) {
+        const resp = await window.electronAPI.addJobLogs(response.jobId);
+        if (resp.success) {
+          alert("Email sent successfully!");
+        } else {
+          alert("Error:", resp.error);
+        }
+      }
     } else {
       alert(`Error: ${response.message}`);
     }
   };
 
-  const handleSend = async () => {
-    console.log("Send", formData.recipients);
-    // senders, templates, senderId, recipients, templateId;
-    const response = await window.electronAPI.sendEmail({
-      senders,
-      templates,
-      recipients: formData.recipients,
-      senderId: formData.sender,
-      templateId: formData.template,
-      // delay: 5000000,
-    });
-
-    if (response.success) {
-      alert("Email sent successfully!");
-    } else {
-      alert(`Error: ${response.message}`);
-    }
+  const handleAddAndSend = async () => {
+    await handleAdd(true);
   };
 
   return (
@@ -317,11 +291,20 @@ const EmailSender = () => {
             </Select>
           </FormControl>
 
-          <Box mt={3} display="flex" justifyContent="space-between">
-            <Button variant="contained" color="primary" onClick={handleSend}>
+          <Box mt={3} display="flex" justifyContent="flex-end">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAdd}
+              sx={{ mr: 1 }}
+            >
               save
             </Button>
-            <Button variant="contained" color="primary" onClick={handleAdd}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAddAndSend}
+            >
               save & send
             </Button>
           </Box>

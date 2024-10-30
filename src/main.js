@@ -227,6 +227,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           templates.Template_Body,
           recipients.First_Name,
           recipients.Last_Name,
+          recipients.Company,
           recipients.Email AS RecipientEmail
         FROM 
           email_jobs AS jobs
