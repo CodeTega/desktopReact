@@ -276,41 +276,65 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     const templateBody = jobDetails[0].Template_Body;
 
     // Loop through each recipient and send an email
-    for (const recipient of jobDetails) {
-      const personalizedBody = templateBody
-        .replace(
-          "{lead.firstname}",
-          `${recipient.First_Name} ${recipient.Last_Name}`
-        )
-        .replace("{lead.company}", `${recipient.Company}`); // Replace with actual recipient name
-      const mailOptions = {
-        from: jobDetails[0].SenderEmail,
-        to: recipient.RecipientEmail,
-        subject: jobDetails[0].Template_Subject,
-        html: personalizedBody,
-      };
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      await transporter.sendMail(mailOptions);
+    // Send emails with delay
+    const sendEmailWithDelay = async (recipients) => {
+      for (const recipient of recipients) {
+        const personalizedBody = templateBody
+          .replace(
+            "{lead.firstname}",
+            `${recipient.First_Name} ${recipient.Last_Name}`
+          )
+          .replace("{lead.company}", `${recipient.Company}`);
 
-      // Insert log entry for each recipient
-      await pool
-        .request()
-        .input("Email_Job_Id", sql.Int, jobDetails[0].JobID)
-        .input("Executed_Date", sql.DateTime, new Date())
-        .input(
-          "Email_Job_Logs",
-          sql.VarChar(sql.MAX),
-          JSON.stringify({
-            Job_Name: jobDetails[0].Job_Name,
-            Recipient: recipient.Email,
-            Status: "Email Sent",
-          })
-        ).query(`
-          INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
-          VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
-        `);
-    }
+        const mailOptions = {
+          from: recipient.SenderEmail,
+          to: recipient.RecipientEmail,
+          subject: recipient.Template_Subject,
+          html: personalizedBody,
+        };
 
+        // Send email
+        await transporter.sendMail(mailOptions);
+        console.log(`Email sent to ${recipient.RecipientEmail}`);
+
+        // Log email sent to the database
+        await pool
+          .request()
+          .input("Email_Job_Id", sql.Int, recipient.JobID)
+          .input("Executed_Date", sql.DateTime, new Date())
+          .input(
+            "Email_Job_Logs",
+            sql.VarChar(sql.MAX),
+            JSON.stringify({
+              Job_Name: recipient.Job_Name,
+              Recipient: recipient.RecipientEmail,
+              Status: "Email Sent",
+            })
+          ).query(`
+            INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
+            VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
+          `);
+
+        // Generate random delay time
+        const delayTime = 50000 + Math.floor(Math.random() * 10000);
+        // const delayTime = 50000 + (Math.floor(Math.random() * 50) + 1) * 1000;
+        console.log(
+          `Waiting for ${
+            delayTime / 1000
+          } seconds before sending to the next recipient...`
+        );
+
+        // Wait before sending the next email
+        await delay(delayTime);
+      }
+
+      console.log("All emails sent.");
+    };
+
+    // Start sending emails
+    sendEmailWithDelay(jobDetails);
     console.log("Emails sent and logs added successfully");
     return { success: true };
   } catch (error) {

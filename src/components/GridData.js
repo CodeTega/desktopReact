@@ -150,6 +150,8 @@ const GridData = ({ emailJobs }) => {
             backgroundColor: "white",
             margin: "10% auto",
             maxWidth: 500,
+            maxHeight: 300, // Set a maximum height for the box
+            overflowY: "auto", // Enable scroll only when content exceeds maxHeight
           }}
         >
           <Typography variant="h6" gutterBottom>
