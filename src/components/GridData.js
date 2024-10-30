@@ -9,6 +9,12 @@ const GridData = ({ emailJobs }) => {
   const [rowData, setRowData] = useState(emailJobs);
   const [selectedJobRecipients, setSelectedJobRecipients] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  useEffect(() => {
+    setRowData(emailJobs);
+  }, [emailJobs]);
 
   // Function to fetch recipients for the selected job ID
   const fetchRecipientsForJob = async (jobId) => {
@@ -20,6 +26,23 @@ const GridData = ({ emailJobs }) => {
       setIsModalOpen(true);
     } catch (error) {
       console.error("Error fetching recipients:", error);
+    }
+  };
+
+  //View job history dates
+
+  const handleViewHistory = async (jobId) => {
+    try {
+      // Call the Electron API to fetch job history
+      const response = await window.electronAPI.fetchJobHistory(jobId);
+      if (response.success) {
+        setHistoryData(response.history); // Store the fetched history
+        setIsHistoryModalOpen(true); // Open the modal to show history
+      } else {
+        console.error("Failed to fetch job history:", response.error);
+      }
+    } catch (error) {
+      console.error("Error fetching job history:", error);
     }
   };
 
@@ -35,7 +58,7 @@ const GridData = ({ emailJobs }) => {
   // Custom button component to trigger recipient fetching
   const CustomButtonComponent = (name, color, params, onClick) => (
     <Button
-      sx={{ backgroundColor: color, color: "black" }}
+      sx={{ backgroundColor: color, color: "white" }}
       onClick={() => onClick(params.data)}
     >
       {name}
@@ -67,10 +90,18 @@ const GridData = ({ emailJobs }) => {
         ),
       flex: 1,
     },
+    {
+      headerName: "History",
+      cellRenderer: (params) =>
+        CustomButtonComponent("History", "#FFA500", params, () =>
+          handleViewHistory(params.data.ID)
+        ),
+      flex: 1,
+    },
   ]);
 
   return (
-    <Box sx={{ padding: 3, maxWidth: 650, margin: "0 auto" }}>
+    <Box sx={{ padding: 3, maxWidth: 750, margin: "0 auto" }}>
       <div className="ag-theme-quartz" style={{ height: 300 }}>
         <AgGridReact
           rowData={rowData}
@@ -100,6 +131,35 @@ const GridData = ({ emailJobs }) => {
             </ul>
           ) : (
             <Typography>No recipients found.</Typography>
+          )}
+        </Box>
+      </Modal>
+
+      <Modal
+        open={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+      >
+        <Box
+          sx={{
+            padding: 3,
+            backgroundColor: "white",
+            margin: "10% auto",
+            maxWidth: 500,
+          }}
+        >
+          <Typography variant="h6" gutterBottom>
+            Executed dates for job
+          </Typography>
+          {historyData.length ? (
+            <ul>
+              {historyData.map((entry, index) => (
+                <li key={index}>
+                  {new Date(entry.Executed_Date).toLocaleString()}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Typography>No Executed date found.</Typography>
           )}
         </Box>
       </Modal>

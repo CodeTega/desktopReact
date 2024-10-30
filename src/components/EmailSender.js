@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 
 import GridData from "./GridData.js";
+import Loader from "./UI/Loader.js";
 
 const initialState = {
   sender: "",
@@ -31,55 +32,59 @@ const initialState = {
 const EmailSender = () => {
   const [formData, setFormData] = useState(initialState);
   const [senders, setSenders] = useState([]);
+  const [isFormSubmit, setIsFormSubmit] = useState(false);
   const [recipients, setRecipients] = useState([]);
   const [filteredRecipients, setFilteredRecipients] = useState([]);
   const [emailJobs, setEmailJobs] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [value, setValue] = useState("");
-  const [jobId, setJobId] = useState();
+  const [showLoader, setShowLoader] = useState(false);
 
+  //radio button value setting
   const handleRadioChange = (event) => {
     console.log("handleRadioChange", event.target);
     setValue(event.target.value);
   };
 
+  //fetch initial data for dropdowns and for grid
   useEffect(() => {
     async function fetchData() {
+      setShowLoader(true);
       const template = await window.electronAPI
         .fetchTemplates()
         .then((data) => data);
-
-      console.log("fetchTemplates returned:", template.recordsets[0][0]);
 
       const recipient = await window.electronAPI
         .fetchRecipients()
         .then((data) => data);
 
-      console.log("fetchRecipients returned:", recipient.recordsets[0][0]);
       const sender = await window.electronAPI
         .fetchSenders()
         .then((data) => data);
 
-      const campaignTypes = Array.from(
-        new Set(recipient.recordsets[0].map((item) => item.Campaign))
-      );
-      console.log(campaignTypes, "campaign");
-      setCampaigns(campaignTypes);
-
-      setSenders(sender.recordsets[0]);
-      setRecipients(recipient.recordsets[0]);
-      setTemplates(template.recordsets[0]);
       const jobs = await window.electronAPI
         .fetchEmailJobs()
         .then((data) => data);
-      console.log(jobs.recordsets[0], "email jobs");
+
+      setShowLoader(false);
+      //campaign names array
+      const campaignTypes = Array.from(
+        new Set(recipient.recordsets[0].map((item) => item.Campaign))
+      );
+
+      setCampaigns(campaignTypes);
+      setSenders(sender.recordsets[0]);
+      //not original recipients these are further filtered
+      setRecipients(recipient.recordsets[0]);
+      setTemplates(template.recordsets[0]);
       setEmailJobs(jobs.recordsets[0]);
     }
 
     fetchData();
-  }, []);
+  }, [isFormSubmit]);
 
+  //for set recipients via some filteration
   useEffect(() => {
     const groupedByCampaign = recipients.reduce((acc, item) => {
       const campaign = item.Campaign;
@@ -122,29 +127,40 @@ const EmailSender = () => {
       recipients: typeof value === "string" ? value.split(",") : value,
     }));
   };
-
   const handleAdd = async (job) => {
+    setIsFormSubmit(false);
+    setShowLoader(true);
     const response = await window.electronAPI.addJob({
       jobName: formData.jobName,
       emailSenderId: formData.sender,
       emailTemplateId: formData.template,
       recipients: formData.recipients,
     });
+
     console.log(response, "response");
     if (response.success) {
-      setJobId(response.jobId);
       alert("Job added successfully!");
+      setFormData(initialState);
+
+      // Update emailJobs to trigger re-render in GridData
+      const jobs = await window.electronAPI.fetchEmailJobs();
+      setEmailJobs(jobs.recordsets[0]);
+
       if (job) {
+        setShowLoader(true);
+        setIsFormSubmit(true);
         const resp = await window.electronAPI.addJobLogs(response.jobId);
         if (resp.success) {
           alert("Email sent successfully!");
         } else {
           alert("Error:", resp.error);
         }
+        setShowLoader(false);
       }
     } else {
       alert(`Error: ${response.message}`);
     }
+    setShowLoader(false);
   };
 
   const handleAddAndSend = async () => {
@@ -156,7 +172,7 @@ const EmailSender = () => {
       <Box
         sx={{
           padding: 3,
-          maxWidth: 600,
+          maxWidth: 700,
           margin: "0 auto",
           boxShadow: 3,
           borderRadius: 2,
@@ -165,6 +181,7 @@ const EmailSender = () => {
         <Typography variant="h5" mb={3}>
           Email Sender
         </Typography>
+        {showLoader && <Loader open={showLoader} />}
         <form>
           <FormControl fullWidth margin="normal">
             <TextField
@@ -260,7 +277,7 @@ const EmailSender = () => {
                 </Box>
               )}
             >
-              {filteredRecipients.map((recipient) => (
+              {filteredRecipients?.map((recipient) => (
                 <MenuItem
                   key={recipient.Email_Recipient_ID}
                   value={recipient.Email_Recipient_ID}
@@ -280,7 +297,7 @@ const EmailSender = () => {
               onChange={handleChange}
               label="Template"
             >
-              {templates.map((template) => (
+              {templates?.map((template) => (
                 <MenuItem
                   key={template.Email_Template_Id}
                   value={template.Email_Template_Id}
@@ -295,7 +312,7 @@ const EmailSender = () => {
             <Button
               variant="contained"
               color="primary"
-              onClick={handleAdd}
+              onClick={() => handleAdd(false)}
               sx={{ mr: 1 }}
             >
               save
@@ -310,7 +327,9 @@ const EmailSender = () => {
           </Box>
         </form>
       </Box>
-      {emailJobs.length > 0 && <GridData emailJobs={emailJobs} />}
+      {emailJobs?.length > 0 && (
+        <GridData emailJobs={emailJobs} isFormSubmit={isFormSubmit} />
+      )}
       {/* <EmailLogs /> */}
     </Grid2>
   );

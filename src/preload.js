@@ -2,12 +2,6 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 // const { contextBridge, ipcRenderer } = require("electron");
 
-// contextBridge.exposeInMainWorld("electronAPI", {
-//   sendEmail: (recipientEmail, messageContent) =>
-//     ipcRenderer.invoke("send-email", recipientEmail, messageContent),
-//   fetchLogs: () => ipcRenderer.invoke("fetch-logs"),
-// });
-
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -19,9 +13,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   addJobLogs: (jobData) => ipcRenderer.invoke("log-job-run", jobData),
   fetchJobRecipients: (jobData) =>
     ipcRenderer.invoke("fetch-job-recipients", jobData),
-  sendEmail: (data) => ipcRenderer.invoke("send-email", data),
-  fetchLogs: () => ipcRenderer.invoke("fetch-logs"),
-  uploadCsv: (filePath) => ipcRenderer.invoke("upload-csv", data),
+  fetchJobHistory: (jobData) => ipcRenderer.invoke("fetchJobHistory", jobData),
   getRecipientsFromDB: () => ipcRenderer.invoke("get-recipients-from-db"),
 });
 
