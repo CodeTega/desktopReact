@@ -198,6 +198,7 @@ const EmailSender = () => {
               label="Name"
               name="jobName"
               type="text"
+              inputProps={{ maxLength: 99 }}
               value={formData.jobName}
               onChange={handleChange}
             />
