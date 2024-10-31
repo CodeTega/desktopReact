@@ -119,13 +119,23 @@ const EmailSender = () => {
   };
 
   const handleRecipientChange = (event) => {
-    const {
-      target: { value },
-    } = event;
-    setFormData((prev) => ({
-      ...prev,
-      recipients: typeof value === "string" ? value.split(",") : value,
-    }));
+    const { value } = event.target;
+
+    if (value.includes("all")) {
+      // Check if "Select All" is checked or unchecked
+      if (formData.recipients.length === filteredRecipients.length) {
+        // Deselect all if already fully selected
+        setFormData({ ...formData, recipients: [] });
+      } else {
+        // Select all
+        setFormData({
+          ...formData,
+          recipients: filteredRecipients.map((rec) => rec.Email_Recipient_ID),
+        });
+      }
+    } else {
+      setFormData({ ...formData, recipients: value });
+    }
   };
   const handleAdd = async (job) => {
     setIsFormSubmit(false);
@@ -137,7 +147,6 @@ const EmailSender = () => {
       recipients: formData.recipients,
     });
 
-    console.log(response, "response");
     if (response.success) {
       alert("Job added successfully!");
       setFormData(initialState);
@@ -158,7 +167,7 @@ const EmailSender = () => {
         setShowLoader(false);
       }
     } else {
-      alert(`Error: ${response.message}`);
+      alert(`Error: ${response.error}`);
     }
     setShowLoader(false);
   };
@@ -277,6 +286,15 @@ const EmailSender = () => {
                 </Box>
               )}
             >
+              <MenuItem value="all">
+                {filteredRecipients?.length > 0 && (
+                  <em>
+                    {formData.recipients.length === filteredRecipients.length
+                      ? "Deselect All"
+                      : "Select All"}
+                  </em>
+                )}
+              </MenuItem>
               {filteredRecipients?.map((recipient) => (
                 <MenuItem
                   key={recipient.Email_Recipient_ID}
