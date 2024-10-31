@@ -203,6 +203,17 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
   try {
     const pool = await sql.connect(databaseConfig);
 
+    // Insert initial log with the execution date
+    const executedDate = new Date();
+    await pool
+      .request()
+      .input("Email_Job_Id", sql.Int, jobId)
+      .input("Executed_Date", sql.DateTime, executedDate)
+      .input("Email_Job_Logs", sql.VarChar(sql.MAX), JSON.stringify([])).query(`
+        INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
+        VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
+      `);
+
     // Fetch job details
     const jobResult = await pool.request().input("Job_Id", sql.Int, jobId)
       .query(`
@@ -237,6 +248,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
 
     const jobDetails = jobResult.recordset;
     const templateBody = jobDetails[0].Template_Body;
+    const emailLog = []; // Collect log data for each recipient
 
     // Setup transporter
     const transporter = nodemailer.createTransport({
@@ -248,8 +260,6 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     });
 
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    const emailLog = []; // Collect log data for each recipient
 
     // Send emails with delay and log success/failure
     const sendEmailWithDelay = async (recipients) => {
@@ -275,7 +285,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
             Recipient: recipient.RecipientEmail,
             Status: "Success",
             Message: "Email Sent",
-            date: new Date().toLocaleString(),
+            Date: new Date().toLocaleString(),
           });
         } catch (err) {
           console.error(
@@ -288,7 +298,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
             Recipient: recipient.RecipientEmail,
             Status: "Failed",
             Message: err.message,
-            date: new Date().toLocaleString(),
+            Date: new Date().toLocaleString(),
           });
         }
 
@@ -307,24 +317,19 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     // Start sending emails
     await sendEmailWithDelay(jobDetails);
 
-    // After all emails are processed, log the job with all recipients' results
+    // After all emails are processed, update the log entry with email results
     await pool
       .request()
       .input("Email_Job_Id", sql.Int, jobId)
-      .input("Executed_Date", sql.DateTime, new Date())
-      .input(
-        "Email_Job_Logs",
-        sql.VarChar(sql.MAX),
-        JSON.stringify({
-          // Job_Name: jobDetails[0].Job_Name,
-          Results: emailLog,
-        })
-      ).query(`
-        INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
-        VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
-      `);
+      .input("Executed_Date", sql.DateTime, executedDate) // Add Executed_Date input here
+      .input("Email_Job_Logs", sql.VarChar(sql.MAX), JSON.stringify(emailLog))
+      .query(`
+    UPDATE email_job_history_logs
+    SET Email_Job_Logs = @Email_Job_Logs
+    WHERE Email_Job_Id = @Email_Job_Id AND Executed_Date = @Executed_Date
+  `);
 
-    console.log("Emails sent and logs added successfully");
+    console.log("Emails sent and logs updated successfully");
     return { success: true, log: emailLog, jobName: jobDetails[0].Job_Name };
   } catch (error) {
     console.error("Error running job:", error);

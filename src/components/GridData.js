@@ -51,9 +51,8 @@ const GridData = ({ emailJobs }) => {
   const runJob = async (jobId) => {
     setShowLoader(true);
     const response = await window.electronAPI.addJobLogs(jobId);
-    console.log(response.log, "here are the logs");
 
-    const result = response.log.reduce(
+    const result = response?.log?.reduce(
       (counts, log) => {
         if (log.Status === "Success") {
           counts.success += 1;
