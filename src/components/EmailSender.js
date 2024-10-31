@@ -97,16 +97,6 @@ const EmailSender = () => {
 
   //for set recipients via some filteration
   useEffect(() => {
-    // const groupedByCampaign = recipients.reduce((acc, item) => {
-    //   const campaign = item.Campaign;
-    //   if (!acc[campaign]) {
-    //     acc[campaign] = [];
-    //   }
-    //   acc[campaign].push(item);
-    //   return acc;
-    // }, {});
-
-    // const rec = groupedByCampaign[formData.campaign];
     if (value && formData.campaign) {
       if (value === "official") {
         fetchRecipientsData(formData?.campaign, value);
@@ -130,14 +120,30 @@ const EmailSender = () => {
   //Handle reccipients all select single select
   // deselect
   const handleRecipientChange = (event) => {
-    const {
-      target: { value },
-    } = event;
-    console.log("recipients handle reci", event);
-    setFormData((prev) => ({
-      ...prev,
-      recipients: typeof value === "string" ? value.split(",") : value,
-    }));
+    const { value } = event.target;
+    const isSelectAllClicked = value.includes("all");
+
+    // Check if all recipients are currently selected
+    const allSelected =
+      formData.recipients.length === filteredRecipients.length;
+
+    if (isSelectAllClicked) {
+      // Toggle all selections if "Select All" is clicked
+      if (allSelected) {
+        setFormData({ ...formData, recipients: [] }); // Deselect all
+      } else {
+        setFormData({
+          ...formData,
+          recipients: filteredRecipients.map((rec) => rec.Email_Recipient_ID),
+        }); // Select all
+      }
+    } else {
+      // Individual selection
+      setFormData({
+        ...formData,
+        recipients: value.filter((val) => val !== "all"),
+      });
+    }
   };
 
   ///
@@ -161,23 +167,38 @@ const EmailSender = () => {
 
       if (job) {
         setShowLoader(true);
-        setIsFormSubmit(true);
         const resp = await window.electronAPI.addJobLogs(response.jobId);
+
+        const result = resp?.log?.reduce(
+          (counts, log) => {
+            if (log.Status === "Success") {
+              counts.success += 1;
+            } else if (log.Status === "Failed") {
+              counts.failed += 1;
+            }
+            return counts;
+          },
+          { success: 0, failed: 0 }
+        );
+
         if (resp.success) {
-          alert("Email sent successfully!");
+          alert(
+            `The "${resp.jobName}" completed successfully\nEmail sent: ${result.success}\nEmail failed: ${result.failed}`
+          );
         } else {
           alert("Error:", resp.error);
         }
         setShowLoader(false);
       }
     } else {
-      alert(`Error: ${response.error}`);
+      alert(`Error:${response.error}`);
     }
-    setShowLoader(false);
+    !job && setShowLoader(false);
   };
 
   const handleAddAndSend = async () => {
     await handleAdd(true);
+    setShowLoader(false);
   };
 
   return (
@@ -295,6 +316,16 @@ const EmailSender = () => {
                 </Box>
               )}
             >
+              {/* Select All option */}
+              <MenuItem value="all">
+                <em>
+                  {formData.recipients.length === filteredRecipients.length
+                    ? "Deselect All"
+                    : "Select All"}
+                </em>
+              </MenuItem>
+
+              {/* Individual recipient options */}
               {filteredRecipients.map((recipient) => (
                 <MenuItem
                   key={recipient.Email_Recipient_ID}
