@@ -51,8 +51,24 @@ const GridData = ({ emailJobs }) => {
   const runJob = async (jobId) => {
     setShowLoader(true);
     const response = await window.electronAPI.addJobLogs(jobId);
+    console.log(response.log, "here are the logs");
+
+    const result = response.log.reduce(
+      (counts, log) => {
+        if (log.Status === "Success") {
+          counts.success += 1;
+        } else if (log.Status === "Failed") {
+          counts.failed += 1;
+        }
+        return counts;
+      },
+      { success: 0, failed: 0 }
+    );
+
     if (response.success) {
-      alert("Email sent successfully!");
+      alert(
+        `The "${response.jobName}" completed successfully\nEmail sent: ${result.success}\nEmail failed: ${result.failed}`
+      );
     } else {
       alert("Error:", response.error);
     }
@@ -166,7 +182,7 @@ const GridData = ({ emailJobs }) => {
               ))}
             </ul>
           ) : (
-            <Typography>No Executed date found.</Typography>
+            <Typography>Data not found.</Typography>
           )}
         </Box>
       </Modal>

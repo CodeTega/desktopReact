@@ -238,7 +238,7 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     const jobDetails = jobResult.recordset;
     const templateBody = jobDetails[0].Template_Body;
 
-    //Transporter
+    // Setup transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -247,10 +247,11 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
       },
     });
 
-    // Loop through each recipient and send an email
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Send emails with delay
+    const emailLog = []; // Collect log data for each recipient
+
+    // Send emails with delay and log success/failure
     const sendEmailWithDelay = async (recipients) => {
       for (const recipient of recipients) {
         const personalizedBody = templateBody
@@ -264,30 +265,34 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           html: personalizedBody,
         };
 
-        // Send email
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent to ${recipient.RecipientEmail}`);
+        try {
+          // Attempt to send email
+          await transporter.sendMail(mailOptions);
+          console.log(`Email sent to ${recipient.RecipientEmail}`);
 
-        // Log email sent to the database
-        await pool
-          .request()
-          .input("Email_Job_Id", sql.Int, recipient.JobID)
-          .input("Executed_Date", sql.DateTime, new Date())
-          .input(
-            "Email_Job_Logs",
-            sql.VarChar(sql.MAX),
-            JSON.stringify({
-              Job_Name: recipient.Job_Name,
-              Recipient: recipient.RecipientEmail,
-              Status: "Email Sent",
-            })
-          ).query(`
-            INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
-            VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
-          `);
+          // Log success for this recipient
+          emailLog.push({
+            Recipient: recipient.RecipientEmail,
+            Status: "Success",
+            Message: "Email Sent",
+            date: new Date().toLocaleString(),
+          });
+        } catch (err) {
+          console.error(
+            `Failed to send email to ${recipient.RecipientEmail}`,
+            err
+          );
 
-        // Generate random delay time
-        // const delayTime = 50000 + Math.floor(Math.random() * 10000);
+          // Log failure with reason for this recipient
+          emailLog.push({
+            Recipient: recipient.RecipientEmail,
+            Status: "Failed",
+            Message: err.message,
+            date: new Date().toLocaleString(),
+          });
+        }
+
+        // Generate a random delay between 50 and 100 seconds
         const delayTime = 50000 + (Math.floor(Math.random() * 50) + 1) * 1000;
         console.log(
           `Waiting for ${
@@ -295,17 +300,32 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           } seconds before sending to the next recipient...`
         );
 
-        // Wait before sending the next email
         await delay(delayTime);
       }
-
-      console.log("All emails sent.");
     };
 
     // Start sending emails
-    sendEmailWithDelay(jobDetails);
+    await sendEmailWithDelay(jobDetails);
+
+    // After all emails are processed, log the job with all recipients' results
+    await pool
+      .request()
+      .input("Email_Job_Id", sql.Int, jobId)
+      .input("Executed_Date", sql.DateTime, new Date())
+      .input(
+        "Email_Job_Logs",
+        sql.VarChar(sql.MAX),
+        JSON.stringify({
+          // Job_Name: jobDetails[0].Job_Name,
+          Results: emailLog,
+        })
+      ).query(`
+        INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
+        VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
+      `);
+
     console.log("Emails sent and logs added successfully");
-    return { success: true };
+    return { success: true, log: emailLog, jobName: jobDetails[0].Job_Name };
   } catch (error) {
     console.error("Error running job:", error);
     return { success: false, error: error.message };
