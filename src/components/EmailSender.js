@@ -33,7 +33,6 @@ const EmailSender = () => {
   const [formData, setFormData] = useState(initialState);
   const [senders, setSenders] = useState([]);
   const [isFormSubmit, setIsFormSubmit] = useState(false);
-  const [recipients, setRecipients] = useState([]);
   const [filteredRecipients, setFilteredRecipients] = useState([]);
   const [emailJobs, setEmailJobs] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -55,8 +54,8 @@ const EmailSender = () => {
         .fetchTemplates()
         .then((data) => data);
 
-      const recipient = await window.electronAPI
-        .fetchRecipients()
+      const campaign = await window.electronAPI
+        .fetchCampaigns()
         .then((data) => data);
 
       const sender = await window.electronAPI
@@ -67,43 +66,53 @@ const EmailSender = () => {
         .fetchEmailJobs()
         .then((data) => data);
 
+      console.log(campaign.recordsets[0], "campaigns");
+
       setShowLoader(false);
       //campaign names array
-      const campaignTypes = Array.from(
-        new Set(recipient.recordsets[0].map((item) => item.Campaign))
-      );
 
-      setCampaigns(campaignTypes);
+      setCampaigns(campaign.recordsets[0]);
       setSenders(sender.recordsets[0]);
       //not original recipients these are further filtered
-      setRecipients(recipient.recordsets[0]);
       setTemplates(template.recordsets[0]);
+      console.log(template.recordsets[0], "templates");
       setEmailJobs(jobs.recordsets[0]);
     }
 
     fetchData();
   }, [isFormSubmit]);
 
+  //handler for filtered recipients
+  const fetchRecipientsData = async (campaign, isOfficial) => {
+    console.log(isOfficial, "is official");
+    const recipientg = await window.electronAPI.filteredRecipients({
+      campaign: campaign,
+      isOfficial: isOfficial,
+    });
+
+    console.log(recipientg.recordsets[0], "recipients filtered lists");
+
+    setFilteredRecipients(recipientg?.recordsets[0]);
+  };
+
   //for set recipients via some filteration
   useEffect(() => {
-    const groupedByCampaign = recipients.reduce((acc, item) => {
-      const campaign = item.Campaign;
-      if (!acc[campaign]) {
-        acc[campaign] = [];
-      }
-      acc[campaign].push(item);
-      return acc;
-    }, {});
-    const rec = groupedByCampaign[formData.campaign];
-    if (value === "official") {
-      const officialCampaigns = rec?.filter((campaign) => campaign.IsOfficial);
-      setFilteredRecipients(officialCampaigns);
-    } else if (value === "other") {
-      const nonOfficialCampaigns = rec?.filter(
-        (campaign) => !campaign.IsOfficial
-      );
+    // const groupedByCampaign = recipients.reduce((acc, item) => {
+    //   const campaign = item.Campaign;
+    //   if (!acc[campaign]) {
+    //     acc[campaign] = [];
+    //   }
+    //   acc[campaign].push(item);
+    //   return acc;
+    // }, {});
 
-      setFilteredRecipients(nonOfficialCampaigns);
+    // const rec = groupedByCampaign[formData.campaign];
+    if (value && formData.campaign) {
+      if (value === "official") {
+        fetchRecipientsData(formData?.campaign, value);
+      } else if (value === "other") {
+        fetchRecipientsData(formData.campaign, value);
+      }
     } else {
       setFilteredRecipients([]);
     }
@@ -118,25 +127,20 @@ const EmailSender = () => {
     }));
   };
 
+  //Handle reccipients all select single select
+  // deselect
   const handleRecipientChange = (event) => {
-    const { value } = event.target;
-
-    if (value.includes("all")) {
-      // Check if "Select All" is checked or unchecked
-      if (formData.recipients.length === filteredRecipients.length) {
-        // Deselect all if already fully selected
-        setFormData({ ...formData, recipients: [] });
-      } else {
-        // Select all
-        setFormData({
-          ...formData,
-          recipients: filteredRecipients.map((rec) => rec.Email_Recipient_ID),
-        });
-      }
-    } else {
-      setFormData({ ...formData, recipients: value });
-    }
+    const {
+      target: { value },
+    } = event;
+    console.log("recipients handle reci", event);
+    setFormData((prev) => ({
+      ...prev,
+      recipients: typeof value === "string" ? value.split(",") : value,
+    }));
   };
+
+  ///
   const handleAdd = async (job) => {
     setIsFormSubmit(false);
     setShowLoader(true);
@@ -153,7 +157,7 @@ const EmailSender = () => {
 
       // Update emailJobs to trigger re-render in GridData
       const jobs = await window.electronAPI.fetchEmailJobs();
-      setEmailJobs(jobs.recordsets[0]);
+      setEmailJobs(jobs?.recordsets[0]);
 
       if (job) {
         setShowLoader(true);
@@ -229,11 +233,14 @@ const EmailSender = () => {
               onChange={handleChange}
               label="Campaign"
             >
-              {campaigns.map((campaign, index) => (
-                <MenuItem key={index} value={campaign}>
-                  {campaign}
-                </MenuItem>
-              ))}
+              {campaigns.map((campaign, index) => {
+                console.log(campaign, "here are the campaings");
+                return (
+                  <MenuItem key={index} value={campaign.campaign}>
+                    {campaign.campaign}
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
 
@@ -265,6 +272,7 @@ const EmailSender = () => {
             </Grid2>
           </FormControl>
 
+          {/*  */}
           <FormControl fullWidth margin="normal">
             <InputLabel id="recipients-label">Recipients</InputLabel>
             <Select
@@ -287,16 +295,7 @@ const EmailSender = () => {
                 </Box>
               )}
             >
-              <MenuItem value="all">
-                {filteredRecipients?.length > 0 && (
-                  <em>
-                    {formData.recipients.length === filteredRecipients.length
-                      ? "Deselect All"
-                      : "Select All"}
-                  </em>
-                )}
-              </MenuItem>
-              {filteredRecipients?.map((recipient) => (
+              {filteredRecipients.map((recipient) => (
                 <MenuItem
                   key={recipient.Email_Recipient_ID}
                   value={recipient.Email_Recipient_ID}
@@ -306,6 +305,7 @@ const EmailSender = () => {
               ))}
             </Select>
           </FormControl>
+          {/*  */}
 
           <FormControl fullWidth margin="normal">
             <InputLabel id="template-label">Template</InputLabel>

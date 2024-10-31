@@ -23,6 +23,39 @@ ipcMain.handle("fetch-templates", async () => {
   }
 });
 
+// Fetch campaigns
+
+ipcMain.handle("fetch-campaigns", async () => {
+  try {
+    const pool = await sql.connect(databaseConfig);
+    const result = await pool
+      .request()
+      .query(`SELECT distinct campaign  FROM email_recipients`);
+    return result;
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return error;
+  }
+});
+// Recipients from the given campaign and isOfficial value
+ipcMain.handle("fetch-filtered-recipients", async (event, data) => {
+  const { campaign, isOfficial } = data;
+  const official = isOfficial === "official" ? true : false;
+  try {
+    const pool = await sql.connect(databaseConfig);
+    const result = await pool
+      .request()
+      .input("campaign", sql.VarChar, campaign) // Set parameter for campaign
+      .input("official", sql.Bit, official) // Set parameter for official status
+      .query(
+        `SELECT Email_Recipient_ID, Email FROM email_recipients WHERE Campaign = @campaign AND IsOfficial = @official;`
+      );
+    return result;
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return error;
+  }
+});
 //Fetch Recipients
 ipcMain.handle("fetch-recipients", async () => {
   try {
@@ -78,7 +111,10 @@ FROM
 LEFT JOIN 
     email_senders AS senders ON jobs.Email_Sender_Id = senders.Email_Sender_Id
 LEFT JOIN 
-    email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id;
+    email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id
+    ORDER BY 
+    jobs.ID DESC;
+
 `);
 
     console.log("Fetched jobs with details:", result.recordset);
