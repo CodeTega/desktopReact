@@ -295,11 +295,13 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
       },
     });
 
-    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const delay = (func) => new Promise(func);
 
     // Send emails with delay and log success/failure
     const sendEmailWithDelay = async (recipients) => {
+      let counter = 0;
       for (const recipient of recipients) {
+        counter++;
         const personalizedBody = templateBody
           .replace("{lead.firstname}", `${recipient.First_Name}`)
           .replace("{lead.company}", `${recipient.Company}`);
@@ -339,14 +341,17 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
         }
 
         // Generate a random delay between 50 and 100 seconds
-        const delayTime = 50000 + (Math.floor(Math.random() * 50) + 1) * 1000;
-        console.log(
-          `Waiting for ${
-            delayTime / 1000
-          } seconds before sending to the next recipient...`
-        );
 
-        await delay(delayTime);
+        if (recipients.length != counter) {
+          const delayTime = 50000 + (Math.floor(Math.random() * 50) + 1) * 1000;
+          console.log(
+            `Waiting for ${
+              delayTime / 1000
+            } seconds before sending to the next recipient...`
+          );
+          console.log("delayed");
+          await delay((resolve) => setTimeout(resolve, delayTime));
+        }
       }
     };
 

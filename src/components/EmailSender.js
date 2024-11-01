@@ -42,6 +42,7 @@ const EmailSender = () => {
 
   //radio button value setting
   const handleRadioChange = (event) => {
+    setFormData({ ...formData, recipients: [] });
     console.log("handleRadioChange", event.target);
     setValue(event.target.value);
   };
@@ -66,17 +67,13 @@ const EmailSender = () => {
         .fetchEmailJobs()
         .then((data) => data);
 
-      console.log(campaign.recordsets[0], "campaigns");
-
       setShowLoader(false);
       //campaign names array
-
-      setCampaigns(campaign.recordsets[0]);
-      setSenders(sender.recordsets[0]);
+      setCampaigns(campaign?.recordsets[0]);
+      setSenders(sender?.recordsets[0]);
       //not original recipients these are further filtered
-      setTemplates(template.recordsets[0]);
-      console.log(template.recordsets[0], "templates");
-      setEmailJobs(jobs.recordsets[0]);
+      setTemplates(template?.recordsets[0]);
+      setEmailJobs(jobs?.recordsets[0]);
     }
 
     fetchData();
@@ -111,6 +108,9 @@ const EmailSender = () => {
   //handle change for single select and text fields
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "campaign") {
+      setFormData({ ...formData, recipients: [] });
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value, // Updates formData.campaign when a campaign is selected
@@ -160,6 +160,7 @@ const EmailSender = () => {
     if (response.success) {
       alert("Job added successfully!");
       setFormData(initialState);
+      setValue("");
 
       // Update emailJobs to trigger re-render in GridData
       const jobs = await window.electronAPI.fetchEmailJobs();
@@ -220,12 +221,23 @@ const EmailSender = () => {
           <FormControl fullWidth margin="normal">
             <TextField
               id="Name"
-              label="Name"
+              label="JobName"
               name="jobName"
               type="text"
               inputProps={{ maxLength: 99 }}
               value={formData.jobName}
               onChange={handleChange}
+              sx={{
+                "& .MuiInputLabel-root": {
+                  backgroundColor: "white",
+                  width: "90px",
+                  marginLeft: "-3px",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  textAlign: "center",
+                  // Extra layer to avoid label getting cut
+                },
+              }}
             />
           </FormControl>
           <FormControl fullWidth margin="normal">
@@ -237,7 +249,7 @@ const EmailSender = () => {
               onChange={handleChange}
               label="Sender"
             >
-              {senders.map((sender) => (
+              {senders?.map((sender) => (
                 <MenuItem key={sender.id} value={sender.Email_Sender_Id}>
                   {sender.Email}
                 </MenuItem>
@@ -254,7 +266,7 @@ const EmailSender = () => {
               onChange={handleChange}
               label="Campaign"
             >
-              {campaigns.map((campaign, index) => {
+              {campaigns?.map((campaign, index) => {
                 console.log(campaign, "here are the campaings");
                 return (
                   <MenuItem key={index} value={campaign.campaign}>
@@ -308,7 +320,7 @@ const EmailSender = () => {
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                   {selected.map((id) => {
-                    const recipient = filteredRecipients.find(
+                    const recipient = filteredRecipients?.find(
                       (rec) => rec.Email_Recipient_ID === id
                     );
                     return <Chip key={id} label={recipient?.Email || id} />;
@@ -319,14 +331,14 @@ const EmailSender = () => {
               {/* Select All option */}
               <MenuItem value="all">
                 <em>
-                  {formData.recipients.length === filteredRecipients.length
+                  {formData.recipients?.length === filteredRecipients?.length
                     ? "Deselect All"
                     : "Select All"}
                 </em>
               </MenuItem>
 
               {/* Individual recipient options */}
-              {filteredRecipients.map((recipient) => (
+              {filteredRecipients?.map((recipient) => (
                 <MenuItem
                   key={recipient.Email_Recipient_ID}
                   value={recipient.Email_Recipient_ID}
