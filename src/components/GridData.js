@@ -6,7 +6,7 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 import { Box, Button, Typography, Modal } from "@mui/material";
 import Loader from "./UI/Loader";
 
-const GridData = ({ emailJobs }) => {
+const GridData = ({ emailJobs, setShowAlert, setSeverity, setAlertText }) => {
   const [rowData, setRowData] = useState(emailJobs);
   const [selectedJobRecipients, setSelectedJobRecipients] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,11 +65,15 @@ const GridData = ({ emailJobs }) => {
     );
 
     if (response.success) {
-      alert(
+      setShowAlert(true);
+      setSeverity("success");
+      setAlertText(
         `The "${response.jobName}" completed successfully\nEmail sent: ${result.success}\nEmail failed: ${result.failed}`
       );
     } else {
-      alert("Error:", response.error);
+      setShowAlert(true);
+      setSeverity("error");
+      setAlertText(response.error);
     }
     setShowLoader(false);
   };
@@ -141,7 +145,7 @@ const GridData = ({ emailJobs }) => {
           }}
         >
           <Typography variant="h6" gutterBottom>
-            Recipients for Job
+            Recipients
           </Typography>
           {selectedJobRecipients.length ? (
             <ul>
@@ -170,7 +174,7 @@ const GridData = ({ emailJobs }) => {
           }}
         >
           <Typography variant="h6" gutterBottom>
-            Executed dates for job
+            Executed At
           </Typography>
           {historyData.length ? (
             <ul>

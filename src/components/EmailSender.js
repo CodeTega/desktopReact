@@ -19,6 +19,7 @@ import {
 
 import GridData from "./GridData.js";
 import Loader from "./UI/Loader.js";
+import AlertBox from "./UI/AlertBox.js";
 
 const initialState = {
   sender: "",
@@ -39,11 +40,28 @@ const EmailSender = () => {
   const [templates, setTemplates] = useState([]);
   const [value, setValue] = useState("");
   const [showLoader, setShowLoader] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertText, setAlertText] = useState("");
+  const [severity, setSeverity] = useState("");
+
+  const [alerts, setAlerts] = useState([]);
+
+  // Function to add a new alert
+  const addAlert = (text, severity) => {
+    setAlerts((prevAlerts) => [
+      ...prevAlerts,
+      { id: Date.now(), text, severity },
+    ]);
+  };
+
+  // Function to remove an alert
+  const removeAlert = (id) => {
+    setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== id));
+  };
 
   //radio button value setting
   const handleRadioChange = (event) => {
     setFormData({ ...formData, recipients: [] });
-    console.log("handleRadioChange", event.target);
     setValue(event.target.value);
   };
 
@@ -71,7 +89,6 @@ const EmailSender = () => {
       //campaign names array
       setCampaigns(campaign?.recordsets[0]);
       setSenders(sender?.recordsets[0]);
-      //not original recipients these are further filtered
       setTemplates(template?.recordsets[0]);
       setEmailJobs(jobs?.recordsets[0]);
     }
@@ -81,13 +98,10 @@ const EmailSender = () => {
 
   //handler for filtered recipients
   const fetchRecipientsData = async (campaign, isOfficial) => {
-    console.log(isOfficial, "is official");
     const recipientg = await window.electronAPI.filteredRecipients({
       campaign: campaign,
       isOfficial: isOfficial,
     });
-
-    console.log(recipientg.recordsets[0], "recipients filtered lists");
 
     setFilteredRecipients(recipientg?.recordsets[0]);
   };
@@ -105,8 +119,13 @@ const EmailSender = () => {
     }
   }, [formData.campaign, value]);
 
+  const handleTextField = (e) => {
+    setFormData({ ...formData, jobName: e.target.value });
+  };
+
   //handle change for single select and text fields
   const handleChange = (e) => {
+    console.log(e.target, "here it the target");
     const { name, value } = e.target;
     if (name === "campaign") {
       setFormData({ ...formData, recipients: [] });
@@ -158,8 +177,9 @@ const EmailSender = () => {
     });
 
     if (response.success) {
-      alert("Job added successfully!");
+      setShowAlert(true);
       setFormData(initialState);
+      addAlert("Job added successfully!", "success");
       setValue("");
 
       // Update emailJobs to trigger re-render in GridData
@@ -183,18 +203,24 @@ const EmailSender = () => {
         );
 
         if (resp.success) {
-          alert(
-            `The "${resp.jobName}" completed successfully\nEmail sent: ${result.success}\nEmail failed: ${result.failed}`
+          setShowAlert(true);
+
+          addAlert(
+            `The "${resp?.jobName}" completed successfully\nEmail sent: ${result?.success}\nEmail failed: ${result.failed}`,
+            "success"
           );
         } else {
-          alert("Error:", resp.error);
+          addAlert(resp.error, "error");
+          setShowAlert(true);
         }
         setShowLoader(false);
       }
     } else {
-      alert(`Error:${response.error}`);
+      setShowAlert(true);
+      addAlert(response.error, "error");
     }
     !job && setShowLoader(false);
+    window.scrollTo(0, 0);
   };
 
   const handleAddAndSend = async () => {
@@ -216,21 +242,30 @@ const EmailSender = () => {
         <Typography variant="h5" mb={3}>
           Email Sender
         </Typography>
+        {showAlert &&
+          alerts.map((alert) => (
+            <AlertBox
+              key={alert.id}
+              severity={alert.severity}
+              text={alert.text}
+              onClose={() => removeAlert(alert.id)} // Remove only the specific alert
+            />
+          ))}
         {showLoader && <Loader open={showLoader} />}
         <form>
           <FormControl fullWidth margin="normal">
             <TextField
-              id="Name"
+              id="JobName"
               label="JobName"
               name="jobName"
               type="text"
-              inputProps={{ maxLength: 99 }}
+              // inputProps={{ maxLength: 99 }}
               value={formData.jobName}
-              onChange={handleChange}
+              onChange={handleTextField}
               sx={{
                 "& .MuiInputLabel-root": {
                   backgroundColor: "white",
-                  width: "90px",
+                  width: "80px",
                   marginLeft: "-3px",
                   justifyContent: "center",
                   alignItems: "center",
@@ -267,7 +302,6 @@ const EmailSender = () => {
               label="Campaign"
             >
               {campaigns?.map((campaign, index) => {
-                console.log(campaign, "here are the campaings");
                 return (
                   <MenuItem key={index} value={campaign.campaign}>
                     {campaign.campaign}
@@ -404,7 +438,12 @@ const EmailSender = () => {
         </form>
       </Box>
       {emailJobs?.length > 0 && (
-        <GridData emailJobs={emailJobs} isFormSubmit={isFormSubmit} />
+        <GridData
+          emailJobs={emailJobs}
+          setShowAlert={setShowAlert}
+          setSeverity={setSeverity}
+          setAlertText={setAlertText}
+        />
       )}
       {/* <EmailLogs /> */}
     </Grid2>

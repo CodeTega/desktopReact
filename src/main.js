@@ -1,8 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
-const path = require("node:path");
-const sqlite3 = require("sqlite3").verbose();
 const nodemailer = require("nodemailer");
-const fs = require("fs");
 const databaseConfig = require("./database.js");
 const sql = require("mssql");
 
@@ -15,7 +12,10 @@ if (require("electron-squirrel-startup")) {
 ipcMain.handle("fetch-templates", async () => {
   try {
     const pool = await sql.connect(databaseConfig);
-    const result = await pool.request().query(`SELECT * FROM email_templates`);
+    const result = await pool.request().query(`SELECT 
+      Email_Template_Id,
+      Template_Name
+      FROM email_templates`);
     return result;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -56,23 +56,15 @@ ipcMain.handle("fetch-filtered-recipients", async (event, data) => {
     return error;
   }
 });
-//Fetch Recipients
-ipcMain.handle("fetch-recipients", async () => {
-  try {
-    const pool = await sql.connect(databaseConfig);
-    const result = await pool.request().query(`SELECT * FROM email_recipients`);
-    return result;
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    return error;
-  }
-});
 
 //fetch senders
 ipcMain.handle("fetch-senders", async () => {
   try {
     const pool = await sql.connect(databaseConfig);
-    const result = await pool.request().query(`SELECT * FROM email_senders`);
+    const result = await pool.request().query(`SELECT 
+      Email_Sender_Id,
+      Email
+      FROM email_senders`);
     return result;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -83,41 +75,29 @@ ipcMain.handle("fetch-senders", async () => {
 //Fetch email jobs
 //fetch senders
 ipcMain.handle("fetch-email-jobs", async () => {
+  //in select use only the main field which you wan to show
+  // not add the extra id in select query
   try {
     const pool = await sql.connect(databaseConfig);
     const result = await pool.request().query(`  
 SELECT 
     jobs.ID,  
     jobs.Job_Name,
-    
-    -- Sender details
-    senders.Email_Sender_Id AS SenderID,
     senders.Email AS SenderEmail,
     senders.FirstName AS SenderName,
-    
-    -- Template details
-    templates.Email_Template_Id AS TemplateID,
-    templates.Template_Name,
-    templates.Template_Body,
-    
-    -- Job additional columns
-    jobs.Add_Who,
-    jobs.Add_Date,
-    jobs.Edit_Who,
-    jobs.Edit_Date,
-    jobs.active
+    templates.Template_Name
 FROM 
     email_jobs AS jobs
-LEFT JOIN 
+JOIN 
     email_senders AS senders ON jobs.Email_Sender_Id = senders.Email_Sender_Id
-LEFT JOIN 
+JOIN 
     email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id
     ORDER BY 
     jobs.ID DESC;
 
 `);
 
-    console.log("Fetched jobs with details:", result.recordset);
+    // console.log("Fetched jobs with details:", result.recordset);
     return result;
   } catch (error) {
     console.error("Error fetching jobs with details:", error);
@@ -141,11 +121,14 @@ ipcMain.handle("add-job", async (event, jobData) => {
       .request()
       .input("Job_Name", sql.VarChar(100), jobName)
       .input("Email_Sender_Id", sql.Int, emailSenderId)
+      .input("Add_Date", sql.DateTime, new Date())
+      .input("active", sql.Bit, true)
       .input("Email_Template_Id", sql.Int, emailTemplateId).query(`
-        INSERT INTO email_jobs (Job_Name, Email_Sender_Id, Email_Template_Id)
-        VALUES (@Job_Name, @Email_Sender_Id, @Email_Template_Id);
+        INSERT INTO email_jobs (Job_Name, Email_Sender_Id,Email_Template_Id ,Add_Date, active)
+        VALUES (@Job_Name, @Email_Sender_Id, @Email_Template_Id, @Add_Date, @active);
 
         SELECT SCOPE_IDENTITY() AS ID;
+        
       `);
 
     const jobId = jobResult.recordset[0].ID; // Job ID from the insertion
@@ -155,9 +138,11 @@ ipcMain.handle("add-job", async (event, jobData) => {
       await transaction
         .request()
         .input("Email_Job_ID", sql.Int, jobId)
+        .input("Add_Date", sql.DateTime, new Date())
+        .input("Active", sql.Bit, true)
         .input("Recipient_ID", sql.Int, recipientId).query(`
-          INSERT INTO job_recipients (Email_Job_ID, Recipient_ID)
-          VALUES (@Email_Job_ID, @Recipient_ID);
+          INSERT INTO job_recipients (Email_Job_ID, Recipient_ID, Add_Date, Active)
+          VALUES (@Email_Job_ID, @Recipient_ID, @Add_Date, @Active);
         `);
     }
 
@@ -241,14 +226,19 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
 
     // Insert initial log with the execution date
     const executedDate = new Date();
-    await pool
+    const insertResult = await pool
       .request()
       .input("Email_Job_Id", sql.Int, jobId)
       .input("Executed_Date", sql.DateTime, executedDate)
+      .input("Add_Date", sql.DateTime, executedDate)
+      .input("active", sql.Bit, true)
       .input("Email_Job_Logs", sql.VarChar(sql.MAX), JSON.stringify([])).query(`
-        INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs)
-        VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs)
+        INSERT INTO email_job_history_logs (Email_Job_Id, Executed_Date, Email_Job_Logs, Add_Date, active)
+        VALUES (@Email_Job_Id, @Executed_Date, @Email_Job_Logs, @Add_Date, @active);
+
+         SELECT SCOPE_IDENTITY() AS ID;
       `);
+    const jobLogsId = insertResult.recordset[0].ID;
 
     // Fetch job details
     const jobResult = await pool.request().input("Job_Id", sql.Int, jobId)
@@ -259,17 +249,27 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           senders.Email AS SenderEmail,
           senders.Sender_Password AS SenderPassword,
           templates.Template_Body,
-          templates.Template_Subject,
-          recipients.First_Name,
-          recipients.Last_Name,
-          recipients.Company,
-          recipients.Email AS RecipientEmail
+          templates.Template_Subject
         FROM 
           email_jobs AS jobs
         JOIN 
           email_senders AS senders ON jobs.Email_Sender_Id = senders.Email_Sender_Id
         JOIN 
           email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id
+        WHERE 
+          jobs.ID = @Job_Id
+      `);
+
+    ////////////////////////// Recipients //////////////////////////
+    const recipients = await pool.request().input("Job_Id", sql.Int, jobId)
+      .query(`
+        SELECT 
+          recipients.First_Name,
+          recipients.Last_Name,
+          recipients.Company,
+          recipients.Email AS RecipientEmail
+        FROM 
+          email_jobs AS jobs
         JOIN 
           job_recipients AS job_rec ON jobs.ID = job_rec.Email_Job_Id
         JOIN 
@@ -278,10 +278,12 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           jobs.ID = @Job_Id
       `);
 
-    if (jobResult.recordset.length === 0) {
+    if (jobResult.recordset.length === 0 || recipients.recordset.length === 0) {
       throw new Error("Job not found");
     }
 
+    const recipientsDetails = recipients.recordset;
+    //job details with all records except recipient records
     const jobDetails = jobResult.recordset;
     const templateBody = jobDetails[0].Template_Body;
     const emailLog = []; // Collect log data for each recipient
@@ -297,19 +299,24 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
 
     const delay = (func) => new Promise(func);
 
+    const senderEmail = jobDetails[0].SenderEmail;
+    const templateSubject = jobDetails[0].Template_Subject;
+
+    // replace placeholders
+
     // Send emails with delay and log success/failure
     const sendEmailWithDelay = async (recipients) => {
       let counter = 0;
       for (const recipient of recipients) {
-        counter++;
         const personalizedBody = templateBody
           .replace("{lead.firstname}", `${recipient.First_Name}`)
           .replace("{lead.company}", `${recipient.Company}`);
+        counter++;
 
         const mailOptions = {
-          from: recipient.SenderEmail,
+          from: senderEmail,
           to: recipient.RecipientEmail,
-          subject: recipient.Template_Subject,
+          subject: templateSubject,
           html: personalizedBody,
         };
 
@@ -356,19 +363,23 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     };
 
     // Start sending emails
-    await sendEmailWithDelay(jobDetails);
+    await sendEmailWithDelay(recipientsDetails);
 
-    // After all emails are processed, update the log entry with email results
+    // After all emails are processed, update the log entry with email results\
+    // primary key email_job_history_logs?
     await pool
       .request()
       .input("Email_Job_Id", sql.Int, jobId)
       .input("Executed_Date", sql.DateTime, executedDate) // Add Executed_Date input here
+      .input("Edit_Date", sql.DateTime, new Date())
       .input("Email_Job_Logs", sql.VarChar(sql.MAX), JSON.stringify(emailLog))
       .query(`
     UPDATE email_job_history_logs
-    SET Email_Job_Logs = @Email_Job_Logs
-    WHERE Email_Job_Id = @Email_Job_Id AND Executed_Date = @Executed_Date
+    SET Email_Job_Logs = @Email_Job_Logs, Edit_Date = @Edit_Date
+    WHERE ID = ${jobLogsId}
   `);
+
+    console.log(jobLogsId, "job logs id");
 
     console.log("Emails sent and logs updated successfully");
     return { success: true, log: emailLog, jobName: jobDetails[0].Job_Name };
