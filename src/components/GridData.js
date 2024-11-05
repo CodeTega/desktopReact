@@ -5,6 +5,7 @@ import "ag-grid-community/styles/ag-theme-alpine.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { Box, Button, Typography, Modal } from "@mui/material";
 import Loader from "./UI/Loader";
+import RunConfirmation from "./UI/RunConfirmation";
 
 const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
   const [rowData, setRowData] = useState(emailJobs);
@@ -13,6 +14,8 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
   const [historyData, setHistoryData] = useState([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const [showRunDialog, setShowRunDialog] = useState(false);
+  const [jobData, setJobData] = useState();
 
   useEffect(() => {
     setRowData(emailJobs);
@@ -48,7 +51,15 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
     }
   };
 
+  //set the data for run the job
+  //and set the dialog state
+  const handleRunJob = (data) => {
+    setShowRunDialog(true);
+    setJobData(data);
+  };
+
   const runJob = async (jobId) => {
+    setShowRunDialog(false);
     setShowLoader(true);
     setShowAlert(false);
     setAlerts([]);
@@ -116,7 +127,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
       headerName: "Action",
       cellRenderer: (params) =>
         CustomButtonComponent("Run", "#04AA6D", params, () =>
-          runJob(params.data.ID)
+          handleRunJob(params.data)
         ),
       flex: 1,
     },
@@ -140,7 +151,14 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
           defaultColDef={{ flex: 1 }}
         />
       </div>
-      {}
+      {showRunDialog && (
+        <RunConfirmation
+          show={showRunDialog}
+          data={jobData}
+          onConfirm={runJob}
+          onCancel={setShowRunDialog}
+        />
+      )}
 
       {/* Modal to display recipient emails */}
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
