@@ -6,7 +6,7 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 import { Box, Button, Typography, Modal } from "@mui/material";
 import Loader from "./UI/Loader";
 
-const GridData = ({ emailJobs, setShowAlert, addAlert }) => {
+const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
   const [rowData, setRowData] = useState(emailJobs);
   const [selectedJobRecipients, setSelectedJobRecipients] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,6 +25,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert }) => {
       // Assuming the backend is set up to fetch recipients by job ID
       const response = await window.electronAPI.fetchJobRecipients(jobId);
       setSelectedJobRecipients(response);
+      console.log("view recipients", response);
       setIsModalOpen(true);
     } catch (error) {
       console.error("Error fetching recipients:", error);
@@ -37,6 +38,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert }) => {
     try {
       // Call the Electron API to fetch job history
       const response = await window.electronAPI.fetchJobHistory(jobId);
+
       if (response.success) {
         setHistoryData(response.history); // Store the fetched history
         setIsHistoryModalOpen(true); // Open the modal to show history
@@ -50,6 +52,8 @@ const GridData = ({ emailJobs, setShowAlert, addAlert }) => {
 
   const runJob = async (jobId) => {
     setShowLoader(true);
+    setShowAlert(false);
+    setAlerts([]);
     const response = await window.electronAPI.addJobLogs(jobId);
 
     const result = response?.log?.reduce(
@@ -152,7 +156,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert }) => {
           <Typography variant="h6" gutterBottom>
             Recipients
           </Typography>
-          {selectedJobRecipients.length ? (
+          {selectedJobRecipients?.length ? (
             <ul>
               {selectedJobRecipients.map((recipient, index) => (
                 <li key={index}>{recipient.Email}</li>

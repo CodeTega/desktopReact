@@ -173,7 +173,8 @@ ipcMain.handle("fetch-job-recipients", async (event, jobId) => {
       .request()
       .input("Email_Job_Id", sql.Int, parsedJobId).query(`
         SELECT 
-          recipients.Email,
+          recipients.Email_Recipient_ID,
+          recipients.Email
          
         FROM 
           job_recipients AS job_rec

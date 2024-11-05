@@ -1,6 +1,6 @@
 {
-  "name": "pioneerlogics",
-  "productName": "pioneerlogics",
+  "name": "smartreachdirect",
+  "productName": "SmartReach Direct",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".webpack/main",
@@ -37,8 +37,8 @@
   },
   "keywords": [],
   "author": {
-    "name": "techbret",
-    "email": "bret@techbret.com"
+    "name": "rana awais",
+    "email": "r.awais@pionlog.com"
   },
   "license": "MIT",
   "dependencies": {

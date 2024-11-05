@@ -167,8 +167,10 @@ const EmailSender = () => {
 
   ///
   const handleAdd = async (job) => {
+    setAlerts([]);
     setIsFormSubmit(false);
     setShowLoader(true);
+    setShowAlert(false);
     const response = await window.electronAPI.addJob({
       jobName: formData.jobName,
       emailSenderId: formData.sender,
@@ -208,8 +210,8 @@ const EmailSender = () => {
           addAlert(
             <p>
               The "${resp?.jobName}" completed successfully. <br />
-              <strong>Emails sent:</strong> ${result?.success} <br />
-              <strong>Failed:</strong> ${result.failed}
+              <strong>Emails sent:</strong> {result?.success} <br />
+              <strong>Failed:</strong> {result.failed}
             </p>,
             "success"
           );
@@ -224,7 +226,7 @@ const EmailSender = () => {
       addAlert(response.error?.message || response.error.toString(), "error");
     }
     !job && setShowLoader(false);
-    window.scrollTo(0, 0);
+    setTimeout(() => window.scrollTo(0, 0), 0);
   };
 
   const handleAddAndSend = async () => {
@@ -239,12 +241,13 @@ const EmailSender = () => {
           padding: 3,
           maxWidth: 700,
           margin: "0 auto",
+          marginTop: "10px",
           boxShadow: 3,
           borderRadius: 2,
         }}
       >
         <Typography variant="h5" mb={3}>
-          Email Sender
+          SmartReach Direct
         </Typography>
         {showAlert &&
           alerts.map((alert) => (
@@ -260,10 +263,10 @@ const EmailSender = () => {
           <FormControl fullWidth margin="normal">
             <TextField
               id="JobName"
-              label="JobName"
+              label="Job Name"
               name="jobName"
               type="text"
-              // inputProps={{ maxLength: 99 }}
+              inputProps={{ maxLength: 99 }}
               value={formData.jobName}
               onChange={handleTextField}
               sx={{
@@ -446,6 +449,7 @@ const EmailSender = () => {
           emailJobs={emailJobs}
           setShowAlert={setShowAlert}
           addAlert={addAlert}
+          setAlerts={setAlerts}
           // setSeverity={setSeverity}
           // setAlertText={setAlertText}
         />
