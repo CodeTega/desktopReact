@@ -68,14 +68,19 @@ const GridData = ({ emailJobs, setShowAlert, addAlert }) => {
       setShowAlert(true);
 
       addAlert(
-        `The "${response.jobName}" completed successfully\nEmails sent: ${result.success}\nFailed: ${result.failed}`,
+        <p>
+          The "{response.jobName}" completed successfully. <br />
+          <strong>Emails sent:</strong> {result?.success} <br />
+          <strong>Failed:</strong> {result.failed}
+        </p>,
         "success"
       );
     } else {
       setShowAlert(true);
-      addAlert(response.error, "error");
+      addAlert(response.error?.message || response.error.toString(), "error");
     }
     setShowLoader(false);
+    window.scrollTo(0, 0);
   };
 
   // Custom button component to trigger recipient fetching

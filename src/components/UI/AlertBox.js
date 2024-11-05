@@ -10,12 +10,13 @@ const AlertBox = ({ text, severity, onClose }) => (
         aria-label="close"
         color="inherit"
         size="small"
-        onClick={onClose} // Calls onClose instead of setting showAlert globally
+        onClick={onClose} // Calls onClose to remove individual alerts
       >
         <CloseIcon fontSize="inherit" />
       </IconButton>
     }
     severity={severity}
+    // Only use dangerouslySetInnerHTML without children
   >
     {text}
   </Alert>

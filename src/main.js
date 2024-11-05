@@ -151,7 +151,7 @@ ipcMain.handle("add-job", async (event, jobData) => {
     console.log("Job and recipients added successfully.");
     return { jobId, success: true };
   } catch (error) {
-    console.error("Error adding job and recipients:", error);
+    console.error("Error adding job and recipients:", error.message);
     return { success: false, error: error };
   }
 });

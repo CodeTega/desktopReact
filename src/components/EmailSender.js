@@ -206,18 +206,22 @@ const EmailSender = () => {
           setShowAlert(true);
 
           addAlert(
-            `The "${resp?.jobName}" completed successfully\nEmails sent: ${result?.success}\nFailed: ${result.failed}`,
+            <p>
+              The "${resp?.jobName}" completed successfully. <br />
+              <strong>Emails sent:</strong> ${result?.success} <br />
+              <strong>Failed:</strong> ${result.failed}
+            </p>,
             "success"
           );
         } else {
-          addAlert(resp.error, "error");
           setShowAlert(true);
+          addAlert(resp.error?.message || resp.error.toString(), "error");
         }
         setShowLoader(false);
       }
     } else {
       setShowAlert(true);
-      addAlert(response.error, "error");
+      addAlert(response.error?.message || response.error.toString(), "error");
     }
     !job && setShowLoader(false);
     window.scrollTo(0, 0);
