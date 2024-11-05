@@ -6,7 +6,7 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 import { Box, Button, Typography, Modal } from "@mui/material";
 import Loader from "./UI/Loader";
 
-const GridData = ({ emailJobs, setShowAlert, setSeverity, setAlertText }) => {
+const GridData = ({ emailJobs, setShowAlert, addAlert }) => {
   const [rowData, setRowData] = useState(emailJobs);
   const [selectedJobRecipients, setSelectedJobRecipients] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,14 +66,14 @@ const GridData = ({ emailJobs, setShowAlert, setSeverity, setAlertText }) => {
 
     if (response.success) {
       setShowAlert(true);
-      setSeverity("success");
-      setAlertText(
-        `The "${response.jobName}" completed successfully\nEmail sent: ${result.success}\nEmail failed: ${result.failed}`
+
+      addAlert(
+        `The "${response.jobName}" completed successfully\nEmails sent: ${result.success}\nFailed: ${result.failed}`,
+        "success"
       );
     } else {
       setShowAlert(true);
-      setSeverity("error");
-      setAlertText(response.error);
+      addAlert(response.error, "error");
     }
     setShowLoader(false);
   };

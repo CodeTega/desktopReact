@@ -206,7 +206,7 @@ const EmailSender = () => {
           setShowAlert(true);
 
           addAlert(
-            `The "${resp?.jobName}" completed successfully\nEmail sent: ${result?.success}\nEmail failed: ${result.failed}`,
+            `The "${resp?.jobName}" completed successfully\nEmails sent: ${result?.success}\nFailed: ${result.failed}`,
             "success"
           );
         } else {
@@ -441,8 +441,9 @@ const EmailSender = () => {
         <GridData
           emailJobs={emailJobs}
           setShowAlert={setShowAlert}
-          setSeverity={setSeverity}
-          setAlertText={setAlertText}
+          addAlert={addAlert}
+          // setSeverity={setSeverity}
+          // setAlertText={setAlertText}
         />
       )}
       {/* <EmailLogs /> */}

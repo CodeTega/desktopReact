@@ -73,7 +73,6 @@ ipcMain.handle("fetch-senders", async () => {
 });
 
 //Fetch email jobs
-//fetch senders
 ipcMain.handle("fetch-email-jobs", async () => {
   //in select use only the main field which you wan to show
   // not add the extra id in select query
@@ -93,7 +92,7 @@ JOIN
 JOIN 
     email_templates AS templates ON jobs.Email_Template_Id = templates.Email_Template_Id
     ORDER BY 
-    jobs.ID DESC;
+    jobs.Add_Date DESC;
 
 `);
 
@@ -174,10 +173,8 @@ ipcMain.handle("fetch-job-recipients", async (event, jobId) => {
       .request()
       .input("Email_Job_Id", sql.Int, parsedJobId).query(`
         SELECT 
-          recipients.Email_Recipient_ID,
           recipients.Email,
-          recipients.First_Name,
-          recipients.Last_Name
+         
         FROM 
           job_recipients AS job_rec
         JOIN 
