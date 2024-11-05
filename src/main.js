@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const nodemailer = require("nodemailer");
 const databaseConfig = require("./database.js");
 const sql = require("mssql");
+const path = require("path");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -394,11 +395,12 @@ const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    icon: path.join(__dirname, "SmartReach_Logo.ico"),
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: true,
     },
-    autoHideMenuBar: false,
+    autoHideMenuBar: true,
   });
 
   // and load the index.html of the app.
