@@ -20,12 +20,10 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
 
   // Function to fetch recipients for the selected job ID
   const fetchRecipientsForJob = async (jobId) => {
-    console.log("job id ", jobId);
     try {
       // Assuming the backend is set up to fetch recipients by job ID
       const response = await window.electronAPI.fetchJobRecipients(jobId);
       setSelectedJobRecipients(response);
-      console.log("view recipients", response);
       setIsModalOpen(true);
     } catch (error) {
       console.error("Error fetching recipients:", error);
@@ -74,7 +72,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
       addAlert(
         <p>
           The "{response.jobName}" completed successfully. <br />
-          <strong>Emails sent:</strong> {result?.success} <br />
+          <strong>Sent:</strong> {result?.success} <br />
           <strong>Failed:</strong> {result.failed}
         </p>,
         "success"
@@ -107,7 +105,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
       flex: 1,
     },
     {
-      field: "Receivers",
+      field: "Recipients",
       cellRenderer: (params) =>
         CustomButtonComponent("View", "#008CBA", params, (data) =>
           fetchRecipientsForJob(data.ID)
@@ -142,6 +140,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
           defaultColDef={{ flex: 1 }}
         />
       </div>
+      {}
 
       {/* Modal to display recipient emails */}
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
@@ -154,7 +153,7 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
           }}
         >
           <Typography variant="h6" gutterBottom>
-            Recipients
+            Recipients:
           </Typography>
           {selectedJobRecipients?.length ? (
             <ul>
@@ -183,11 +182,11 @@ const GridData = ({ emailJobs, setShowAlert, addAlert, setAlerts }) => {
           }}
         >
           <Typography variant="h6" gutterBottom>
-            Executed At
+            Executed At:
           </Typography>
           {historyData.length ? (
             <ul>
-              {historyData.map((entry, index) => (
+              {historyData?.map((entry, index) => (
                 <li key={index}>
                   {new Date(entry.Executed_Date).toLocaleString()}
                 </li>
