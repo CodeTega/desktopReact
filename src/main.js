@@ -269,6 +269,8 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
           jobs.Job_Name,
           senders.Email AS SenderEmail,
           senders.Sender_Password AS SenderPassword,
+          senders.Email_Port as Port,
+          senders.Email_Host as Host,
           templates.Template_Body,
           templates.Template_Subject
         FROM 
@@ -309,18 +311,22 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
     const templateBody = jobDetails[0].Template_Body;
     const emailLog = []; // Collect log data for each recipient
 
+    //credentials for set domain and port
+    const senderEmail = jobDetails[0].SenderEmail;
+    const senderPassword = jobDetails[0].SenderPassword;
+
     // Setup transporter
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: `smtp.${jobDetails[0].Host}`,
+      port: jobDetails[0].Port,
       auth: {
-        user: jobDetails[0].SenderEmail,
-        pass: jobDetails[0].SenderPassword,
+        user: senderEmail,
+        pass: senderPassword,
       },
     });
 
     const delay = (func) => new Promise(func);
 
-    const senderEmail = jobDetails[0].SenderEmail;
     const templateSubject = jobDetails[0].Template_Subject;
 
     // replace placeholders
