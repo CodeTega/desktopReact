@@ -4,7 +4,7 @@ const path = require("path");
 
 module.exports = {
   packagerConfig: {
-    icon: path.join(__dirname, "SmartReach_Logo"),
+    icon: "src/SmartReach_Logo.ico",
     asar: true,
   },
   rebuildConfig: {},

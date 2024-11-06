@@ -97,7 +97,7 @@ JOIN
 
 `);
 
-    // console.log("Fetched jobs with details:", result.recordset);
+    console.log("Fetched jobs with details:", result.recordset);
     return result;
   } catch (error) {
     console.error("Error fetching jobs with details:", error);
@@ -111,12 +111,35 @@ ipcMain.handle("add-job", async (event, jobData) => {
   console.log(jobData, "job Data ");
 
   try {
+    const trimmedJobName = jobName.trim().toLowerCase();
+
     const pool = await sql.connect(databaseConfig);
+
+    // Step 1: Check for duplicate job name in the database
+    const duplicateCheckResult = await pool
+      .request()
+      .input("JobName", sql.VarChar(100), trimmedJobName).query(`
+        SELECT COUNT(*) AS matchCount
+        FROM email_jobs
+        WHERE LOWER(RTRIM(LTRIM(Job_Name))) = @JobName
+      `);
+
+    const matchCount = duplicateCheckResult.recordset[0].matchCount;
+
+    // If there are matches, return with a message and skip the insertion
+    if (matchCount > 0) {
+      console.log(`Duplicate job name found: ${matchCount} match(es)`);
+      return {
+        success: false,
+        message: `"${jobName}" is already taken. Try using a unique name.`,
+      };
+    }
+
     // Start a transaction for consistency
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
-    // Step 1: Insert job and retrieve job ID
+    // Step 2: Insert job and retrieve job ID
     const jobResult = await transaction
       .request()
       .input("Job_Name", sql.VarChar(100), jobName)
@@ -124,16 +147,15 @@ ipcMain.handle("add-job", async (event, jobData) => {
       .input("Add_Date", sql.DateTime, new Date())
       .input("active", sql.Bit, true)
       .input("Email_Template_Id", sql.Int, emailTemplateId).query(`
-        INSERT INTO email_jobs (Job_Name, Email_Sender_Id,Email_Template_Id ,Add_Date, active)
+        INSERT INTO email_jobs (Job_Name, Email_Sender_Id, Email_Template_Id, Add_Date, active)
         VALUES (@Job_Name, @Email_Sender_Id, @Email_Template_Id, @Add_Date, @active);
 
         SELECT SCOPE_IDENTITY() AS ID;
-        
       `);
 
     const jobId = jobResult.recordset[0].ID; // Job ID from the insertion
 
-    // Step 2: Insert recipients into job_recipients table using the job ID
+    // Step 3: Insert recipients into job_recipients table using the job ID
     for (const recipientId of recipients) {
       await transaction
         .request()
@@ -153,7 +175,7 @@ ipcMain.handle("add-job", async (event, jobData) => {
     return { jobId, success: true };
   } catch (error) {
     console.error("Error adding job and recipients:", error.message);
-    return { success: false, error: error };
+    return { success: false, error: error.message };
   }
 });
 
@@ -391,16 +413,19 @@ ipcMain.handle("log-job-run", async (event, jobId) => {
 // Fetch logs from the database
 
 const createWindow = () => {
+  //to show the icon at the title bar in exe use
+  // icon: icon: __dirname + "/SmartReach_Logo.ico" here
+  //and use this into the forge.config file
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
-    icon: path.join(__dirname, "SmartReach_Logo.ico"),
+    icon: __dirname + "/SmartReach_Logo.ico",
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: true,
     },
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
   });
 
   // and load the index.html of the app.

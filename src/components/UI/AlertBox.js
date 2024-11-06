@@ -5,6 +5,7 @@ import CloseIcon from "@mui/icons-material/Close";
 
 const AlertBox = ({ text, severity, onClose }) => (
   <Alert
+    sx={{ marginTop: 1 }}
     action={
       <IconButton
         aria-label="close"

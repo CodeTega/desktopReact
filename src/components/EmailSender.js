@@ -176,6 +176,7 @@ const EmailSender = () => {
     });
 
     if (response.success) {
+      console.log("inside the response success");
       setShowAlert(true);
       setFormData(initialState);
       addAlert("Job added successfully!", "success");
@@ -219,10 +220,17 @@ const EmailSender = () => {
         setShowLoader(false);
       }
     } else {
+      console.log(response, "response");
       setShowAlert(true);
-      addAlert(response?.error?.message || response?.error.toString(), "error");
+      addAlert(
+        response?.error?.message ||
+          response?.error?.toString() ||
+          response?.message,
+        "error"
+      );
     }
     !job && setShowLoader(false);
+    job && !response.success && setShowLoader(false);
     setTimeout(() => window.scrollTo(0, 0), 0);
   };
 
