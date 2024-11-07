@@ -425,13 +425,14 @@ const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 800,
-    height: 600,
-    icon: __dirname + "/SmartReach_Logo.ico",
+    height: 700,
+    icon: __dirname + "/SmartReach_Log.ico",
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: true,
     },
-    autoHideMenuBar: false,
+    //want to hide the dev tools then true else false
+    autoHideMenuBar: true,
   });
 
   // and load the index.html of the app.
